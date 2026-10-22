@@ -1,5 +1,6 @@
 import os
 import json
+import requests
 from datetime import datetime
 from flask import Flask, render_template_string, request, redirect, url_for, session, flash
 from flask_sqlalchemy import SQLAlchemy
@@ -29,7 +30,8 @@ class Plan(db.Model):
     description = db.Column(db.Text, nullable=False)
     price = db.Column(db.Integer, nullable=False, default=199)
     videos_count = db.Column(db.Integer, nullable=False, default=25)
-    image_url = db.Column(db.String(500), nullable=False)
+    image_url = db.Column(db.String(500), nullable=False) # Main Thumbnail
+    extra_images = db.Column(db.Text, nullable=True) # Multiple Demo Images separated by comma or newline
     telegram_url = db.Column(db.String(500), default="https://t.me/NexusDemoBot")
     demo_instructions = db.Column(db.Text, default="1. Click Watch Demo on Telegram\n2. Open Telegram bot\n3. Follow instructions to view demo")
     enabled = db.Column(db.Boolean, default=True)
@@ -65,6 +67,8 @@ with app.app_context():
         'upi_id': 'nexuspayments@oksbi',
         'upi_name': 'Nexus Digital Store',
         'telegram_support': 'https://t.me/NexusSupportBot',
+        'telegram_bot_token': '',
+        'telegram_chat_id': '',
         'payment_instructions': '1. Scan QR or pay to UPI ID\n2. Copy 12-digit UTR number\n3. Submit UTR below for verification'
     }
     for k, v in default_settings.items():
@@ -73,19 +77,19 @@ with app.app_context():
             
     if Plan.query.count() == 0:
         initial_plans = [
-            ("Python Mastery & Backend Pro", "Build robust backend applications, APIs, and automated systems with Python.", 199, 30, "https://i.ibb.co/Fb6S1mYg/course1.jpg"),
-            ("Full Stack Web Development Bootcamp", "Master HTML, CSS, JavaScript, React, and Node.js from scratch.", 299, 45, "https://i.ibb.co/ZRqKVvRQ/course2.jpg"),
-            ("Advanced React & Next.js Masterclass", "Build lightning-fast, SEO-optimized web applications with modern React.", 249, 28, "https://i.ibb.co/21H7BGM2/course3.jpg"),
-            ("Data Science & Machine Learning Pro", "Analyze complex datasets and build predictive AI models using Python.", 399, 50, "https://i.ibb.co/QF2v05qK/course4.jpg"),
-            ("Cybersecurity & Ethical Hacking 2026", "Learn penetration testing, network security, and vulnerability assessment.", 349, 35, "https://i.ibb.co/5X0hc5dd/course5.jpg"),
-            ("UI/UX Design Master Course", "Design stunning user interfaces and seamless experiences in Figma.", 199, 22, "https://i.ibb.co/HLw36KQ4/course6.jpg"),
-            ("Android & iOS App Development", "Create cross-platform mobile applications using Flutter and React Native.", 299, 40, "https://i.ibb.co/9kKCd6ZF/course7.jpg"),
-            ("Cloud Computing & AWS DevOps", "Master cloud infrastructure, Docker, Kubernetes, and CI/CD pipelines.", 449, 38, "https://i.ibb.co/C5KZBm7f/course8.jpg"),
-            ("AI & Generative Prompt Engineering", "Leverage LLMs, AI agents, and prompt frameworks to supercharge productivity.", 199, 20, "https://i.ibb.co/qFhKnzcH/course9.jpg"),
-            ("Digital Marketing & Growth Hacking", "Scale brands, run high-converting ad campaigns, and master SEO.", 199, 25, "https://i.ibb.co/84598K8j/course10.jpg")
+            ("Python Mastery & Backend Pro", "Build robust backend applications, APIs, and automated systems with Python.", 199, 30, "https://i.ibb.co/Fb6S1mYg/course1.jpg", "https://i.ibb.co/5X0hc5dd/course5.jpg,https://i.ibb.co/ZRqKVvRQ/course2.jpg"),
+            ("Full Stack Web Development Bootcamp", "Master HTML, CSS, JavaScript, React, and Node.js from scratch.", 299, 45, "https://i.ibb.co/ZRqKVvRQ/course2.jpg", "https://i.ibb.co/Fb6S1mYg/course1.jpg"),
+            ("Advanced React & Next.js Masterclass", "Build lightning-fast, SEO-optimized web applications with modern React.", 249, 28, "https://i.ibb.co/21H7BGM2/course3.jpg", ""),
+            ("Data Science & Machine Learning Pro", "Analyze complex datasets and build predictive AI models using Python.", 399, 50, "https://i.ibb.co/QF2v05qK/course4.jpg", ""),
+            ("Cybersecurity & Ethical Hacking 2026", "Learn penetration testing, network security, and vulnerability assessment.", 349, 35, "https://i.ibb.co/5X0hc5dd/course5.jpg", ""),
+            ("UI/UX Design Master Course", "Design stunning user interfaces and seamless experiences in Figma.", 199, 22, "https://i.ibb.co/HLw36KQ4/course6.jpg", ""),
+            ("Android & iOS App Development", "Create cross-platform mobile applications using Flutter and React Native.", 299, 40, "https://i.ibb.co/9kKCd6ZF/course7.jpg", ""),
+            ("Cloud Computing & AWS DevOps", "Master cloud infrastructure, Docker, Kubernetes, and CI/CD pipelines.", 449, 38, "https://i.ibb.co/C5KZBm7f/course8.jpg", ""),
+            ("AI & Generative Prompt Engineering", "Leverage LLMs, AI agents, and prompt frameworks to supercharge productivity.", 199, 20, "https://i.ibb.co/qFhKnzcH/course9.jpg", ""),
+            ("Digital Marketing & Growth Hacking", "Scale brands, run high-converting ad campaigns, and master SEO.", 199, 25, "https://i.ibb.co/84598K8j/course10.jpg", "")
         ]
-        for idx, (title, desc, price, vids, img) in enumerate(initial_plans):
-            p = Plan(title=title, description=desc, price=price, videos_count=vids, image_url=img, order_index=idx)
+        for idx, (title, desc, price, vids, img, extra) in enumerate(initial_plans):
+            p = Plan(title=title, description=desc, price=price, videos_count=vids, image_url=img, extra_images=extra, order_index=idx)
             db.session.add(p)
             
     if not Analytics.query.first():
@@ -94,6 +98,27 @@ with app.app_context():
 
 def get_settings():
     return {s.key: s.value for s in Setting.query.all()}
+
+def send_telegram_notification(order_info):
+    settings = get_settings()
+    token = settings.get('telegram_bot_token', '').strip()
+    chat_id = settings.get('telegram_chat_id', '').strip()
+    
+    if token and chat_id:
+        message = (
+            f"🚨 *New Payment Submission!* 🚨\n\n"
+            f"🆔 *Order ID:* `{order_info['order_id']}`\n"
+            f"📚 *Course:* {order_info['course_name']}\n"
+            f"💰 *Amount:* ₹{order_info['amount']}\n"
+            f"🔢 *UTR Number:* `{order_info['utr']}`\n"
+            f"⏳ *Status:* Pending Verification\n\n"
+            f"Please check your Admin Dashboard to approve or reject."
+        )
+        url = f"https://api.telegram.org/bot{token}/sendMessage"
+        try:
+            requests.post(url, json={"chat_id": chat_id, "text": message, "parse_mode": "Markdown"}, timeout=5)
+        except Exception as e:
+            print("Telegram notification failed:", e)
 
 # --- ROUTES ---
 @app.route('/')
@@ -110,7 +135,8 @@ def index():
 def demo_page(plan_id):
     settings = get_settings()
     plan = Plan.query.get_or_404(plan_id)
-    return render_template_string(DEMO_HTML, settings=settings, plan=plan)
+    extra_imgs = [img.strip() for img in plan.extra_images.split(',')] if plan.extra_images else []
+    return render_template_string(DEMO_HTML, settings=settings, plan=plan, extra_imgs=extra_imgs)
 
 @app.route('/payment/<int:plan_id>', methods=['GET', 'POST'])
 def payment_page(plan_id):
@@ -126,6 +152,10 @@ def payment_page(plan_id):
         new_order = Order(order_id=order_id, plan_id=plan.id, course_name=plan.title, amount=plan.price, utr=utr, status='Pending')
         db.session.add(new_order)
         db.session.commit()
+        
+        # Trigger Telegram Notification
+        send_telegram_notification({'order_id': order_id, 'course_name': plan.title, 'amount': plan.price, 'utr': utr})
+        
         return redirect(url_for('payment_success', order_id=order_id))
     return render_template_string(PAYMENT_HTML, settings=settings, plan=plan)
 
@@ -179,6 +209,7 @@ def admin_save_plan():
     price = int(request.form.get('price', 199))
     videos_count = int(request.form.get('videos_count', 25))
     image_url = request.form.get('image_url')
+    extra_images = request.form.get('extra_images', '')
     telegram_url = request.form.get('telegram_url')
     demo_instructions = request.form.get('demo_instructions')
     enabled = True if request.form.get('enabled') == 'on' else False
@@ -190,6 +221,7 @@ def admin_save_plan():
         plan.price = price
         plan.videos_count = videos_count
         plan.image_url = image_url
+        plan.extra_images = extra_images
         plan.telegram_url = telegram_url
         plan.demo_instructions = demo_instructions
         plan.enabled = enabled
@@ -197,7 +229,7 @@ def admin_save_plan():
         max_order = db.session.query(db.func.max(Plan.order_index)).scalar() or 0
         new_plan = Plan(
             title=title, description=description, price=price, videos_count=videos_count,
-            image_url=image_url, telegram_url=telegram_url, demo_instructions=demo_instructions,
+            image_url=image_url, extra_images=extra_images, telegram_url=telegram_url, demo_instructions=demo_instructions,
             enabled=enabled, order_index=max_order + 1
         )
         db.session.add(new_plan)
@@ -219,7 +251,7 @@ def admin_delete_plan(plan_id):
 def admin_update_settings():
     if not session.get('admin_logged'):
         return redirect(url_for('admin_login'))
-    for key in ['site_name', 'site_caption', 'site_logo', 'upi_id', 'upi_name', 'telegram_support', 'payment_instructions']:
+    for key in ['site_name', 'site_caption', 'site_logo', 'upi_id', 'upi_name', 'telegram_support', 'telegram_bot_token', 'telegram_chat_id', 'payment_instructions']:
         val = request.form.get(key)
         if val is not None:
             setting = Setting.query.filter_by(key=key).first()
@@ -324,6 +356,7 @@ DEMO_HTML = BASE_HEAD.replace('{% block content %}{% endblock %}', """
         <i class="fa-solid fa-arrow-left"></i> Back to Courses
     </a>
     <div class="glass rounded-3xl p-6 md:p-10 border border-purple-900/50 glow-effect">
+        <!-- Main Thumbnail View -->
         <div class="grid grid-cols-1 md:grid-cols-2 gap-8 items-center">
             <div class="rounded-2xl overflow-hidden border border-purple-500/30 h-80 bg-black/80 flex items-center justify-center p-4">
                 <img src="{{ plan.image_url }}" alt="{{ plan.title }}" class="w-full h-full object-contain drop-shadow-2xl" onerror="this.src='https://images.unsplash.com/photo-1618005182384-a83a8bd57fbe?w=800'">
@@ -340,6 +373,23 @@ DEMO_HTML = BASE_HEAD.replace('{% block content %}{% endblock %}', """
                 </div>
             </div>
         </div>
+
+        <!-- Extra Demo Images Grid (2-3 Images Preview) -->
+        {% if extra_imgs %}
+        <div class="mt-10 pt-8 border-t border-purple-900/40">
+            <h3 class="text-lg font-bold text-purple-200 mb-4"><i class="fa-solid fa-images mr-2 text-purple-400"></i> Course Preview Screenshots</h3>
+            <div class="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-4">
+                {% for img in extra_imgs %}
+                {% if img %}
+                <div class="h-48 rounded-2xl overflow-hidden border border-purple-500/30 bg-black/60 flex items-center justify-center p-2">
+                    <img src="{{ img }}" alt="Screenshot" class="w-full h-full object-contain hover:scale-105 transition duration-300" onerror="this.style.display='none'">
+                </div>
+                {% endif %}
+                {% endfor %}
+            </div>
+        </div>
+        {% endif %}
+
         <div class="mt-10 pt-8 border-t border-purple-900/40 text-center">
             <h3 class="text-xl font-bold mb-4">Want to test the course before buying?</h3>
             <a href="{{ plan.telegram_url }}" target="_blank" class="inline-flex items-center gap-3 px-8 py-4 rounded-2xl bg-blue-600 hover:bg-blue-500 text-white font-bold text-lg shadow-2xl glow-blue transition transform hover:scale-105">
@@ -407,7 +457,7 @@ SUCCESS_HTML = BASE_HEAD.replace('{% block content %}{% endblock %}', """
             <i class="fa-solid fa-check"></i>
         </div>
         <h1 class="text-2xl font-black text-white">Payment Details Submitted!</h1>
-        <p class="text-purple-300/80 text-sm mt-2">Your submission has been securely recorded and is awaiting manual verification.</p>
+        <p class="text-purple-300/80 text-sm mt-2">Your submission has been securely recorded and sent to admin via Telegram.</p>
         <div class="my-6 p-4 rounded-2xl bg-purple-950/60 border border-purple-500/30 text-left space-y-2 text-sm">
             <div class="flex justify-between"><span class="text-purple-400">Order ID:</span> <span class="font-mono text-white">{{ order.order_id }}</span></div>
             <div class="flex justify-between"><span class="text-purple-400">Course:</span> <span class="text-white font-bold">{{ order.course_name }}</span></div>
@@ -481,7 +531,7 @@ ADMIN_DASHBOARD_HTML = BASE_HEAD.replace('{% block content %}{% endblock %}', ""
     <div class="flex gap-2 border-b border-purple-900/50 pb-4 mb-8 overflow-x-auto">
         <button onclick="switchTab('orders')" id="tab-btn-orders" class="px-5 py-2.5 rounded-xl font-bold text-sm bg-purple-900 text-white shadow-md transition">Orders ({{ orders|length }})</button>
         <button onclick="switchTab('plans')" id="tab-btn-plans" class="px-5 py-2.5 rounded-xl font-bold text-sm bg-purple-950/60 text-purple-300 hover:bg-purple-900/50 transition">Course Plans ({{ plans|length }})</button>
-        <button onclick="switchTab('settings')" id="tab-btn-settings" class="px-5 py-2.5 rounded-xl font-bold text-sm bg-purple-950/60 text-purple-300 hover:bg-purple-900/50 transition">Settings & UPI</button>
+        <button onclick="switchTab('settings')" id="tab-btn-settings" class="px-5 py-2.5 rounded-xl font-bold text-sm bg-purple-950/60 text-purple-300 hover:bg-purple-900/50 transition">Settings & Bot</button>
     </div>
     <div id="tab-orders" class="space-y-6">
         <div class="glass rounded-2xl border border-purple-900/50 overflow-hidden">
@@ -544,7 +594,7 @@ ADMIN_DASHBOARD_HTML = BASE_HEAD.replace('{% block content %}{% endblock %}', ""
                     <div class="mt-4 pt-4 border-t border-purple-900/50 flex items-center justify-between">
                         <span class="text-xs {% if plan.enabled %}text-emerald-400{% else %}text-red-400{% endif %} font-semibold">● {% if plan.enabled %}Active{% else %}Disabled{% endif %}</span>
                         <div class="flex gap-2">
-                            <button onclick='editPlan({{ {"id": plan.id, "title": plan.title, "description": plan.description, "price": plan.price, "videos_count": plan.videos_count, "image_url": plan.image_url, "telegram_url": plan.telegram_url, "demo_instructions": plan.demo_instructions, "enabled": plan.enabled}|tojson|safe }})' class="px-3 py-1.5 rounded-lg bg-purple-800 hover:bg-purple-700 text-white text-xs font-bold transition">Edit</button>
+                            <button onclick='editPlan({{ {"id": plan.id, "title": plan.title, "description": plan.description, "price": plan.price, "videos_count": plan.videos_count, "image_url": plan.image_url, "extra_images": plan.extra_images or "", "telegram_url": plan.telegram_url, "demo_instructions": plan.demo_instructions, "enabled": plan.enabled}|tojson|safe }})' class="px-3 py-1.5 rounded-lg bg-purple-800 hover:bg-purple-700 text-white text-xs font-bold transition">Edit</button>
                             <a href="/admin/plan/delete/{{ plan.id }}" onclick="return confirm('Delete this plan?');" class="px-3 py-1.5 rounded-lg bg-red-950 hover:bg-red-900 text-red-200 text-xs font-bold transition">Delete</a>
                         </div>
                     </div>
@@ -555,7 +605,7 @@ ADMIN_DASHBOARD_HTML = BASE_HEAD.replace('{% block content %}{% endblock %}', ""
     </div>
     <div id="tab-settings" class="hidden space-y-6">
         <div class="glass rounded-3xl p-6 md:p-8 border border-purple-900/50">
-            <h2 class="text-xl font-bold text-white mb-6">Website & Payment Settings</h2>
+            <h2 class="text-xl font-bold text-white mb-6">Website, UPI & Telegram Bot Settings</h2>
             <form action="/admin/settings/update" method="POST" class="space-y-6">
                 <div>
                     <label class="block text-xs font-bold uppercase tracking-wider text-purple-300 mb-2">Website Name (Top Priority)</label>
@@ -573,6 +623,16 @@ ADMIN_DASHBOARD_HTML = BASE_HEAD.replace('{% block content %}{% endblock %}', ""
                     <div>
                         <label class="block text-xs font-bold uppercase tracking-wider text-purple-300 mb-2">UPI Account Name</label>
                         <input type="text" name="upi_name" value="{{ settings.upi_name }}" required class="w-full px-4 py-3 rounded-xl bg-purple-950/60 border border-purple-500/30 text-white">
+                    </div>
+                </div>
+                <div class="grid grid-cols-1 md:grid-cols-2 gap-6 pt-4 border-t border-purple-900/50">
+                    <div>
+                        <label class="block text-xs font-bold uppercase tracking-wider text-purple-300 mb-2">Telegram Bot Token (For Notifications)</label>
+                        <input type="text" name="telegram_bot_token" value="{{ settings.telegram_bot_token }}" placeholder="e.g. 123456789:ABCdefGhIJKlmNoPQRsTUVwxyZ" class="w-full px-4 py-3 rounded-xl bg-purple-950/60 border border-purple-500/30 text-white font-mono">
+                    </div>
+                    <div>
+                        <label class="block text-xs font-bold uppercase tracking-wider text-purple-300 mb-2">Admin Telegram Chat ID</label>
+                        <input type="text" name="telegram_chat_id" value="{{ settings.telegram_chat_id }}" placeholder="e.g. 987654321" class="w-full px-4 py-3 rounded-xl bg-purple-950/60 border border-purple-500/30 text-white font-mono">
                     </div>
                 </div>
                 <div>
@@ -611,11 +671,15 @@ ADMIN_DASHBOARD_HTML = BASE_HEAD.replace('{% block content %}{% endblock %}', ""
                 </div>
             </div>
             <div>
-                <label class="block text-xs font-bold uppercase tracking-wider text-purple-300 mb-1">Course Thumbnail Image URL</label>
+                <label class="block text-xs font-bold uppercase tracking-wider text-purple-300 mb-1">Main Thumbnail Image URL</label>
                 <input type="text" name="image_url" id="modal_image_url" oninput="updatePreview('modal_image_url', 'modal_img_preview')" required class="w-full px-4 py-2.5 rounded-xl bg-purple-950/60 border border-purple-500/30 text-white">
-                <div class="mt-3 w-full h-36 rounded-xl overflow-hidden border border-purple-500/30 bg-black/80 flex items-center justify-center p-2">
+                <div class="mt-3 w-full h-32 rounded-xl overflow-hidden border border-purple-500/30 bg-black/80 flex items-center justify-center p-2">
                     <img id="modal_img_preview" src="" alt="Preview" class="w-full h-full object-contain" onerror="this.src='https://images.unsplash.com/photo-1618005182384-a83a8bd57fbe?w=400'">
                 </div>
+            </div>
+            <div>
+                <label class="block text-xs font-bold uppercase tracking-wider text-purple-300 mb-1">Extra Demo Images URLs (Comma Separated for 2-3 Images)</label>
+                <input type="text" name="extra_images" id="modal_extra_images" placeholder="https://i.ibb.co/..., https://i.ibb.co/..." class="w-full px-4 py-2.5 rounded-xl bg-purple-950/60 border border-purple-500/30 text-white text-xs">
             </div>
             <div>
                 <label class="block text-xs font-bold uppercase tracking-wider text-purple-300 mb-1">Telegram Demo URL (Bot / Link)</label>
@@ -663,6 +727,7 @@ function openPlanModal() {
     document.getElementById('modal_price').value = '199';
     document.getElementById('modal_videos').value = '25';
     document.getElementById('modal_image_url').value = '';
+    document.getElementById('modal_extra_images').value = '';
     document.getElementById('modal_img_preview').src = '';
     document.getElementById('modal_telegram').value = 'https://t.me/NexusDemoBot';
     document.getElementById('modal_desc').value = '';
@@ -677,6 +742,7 @@ function editPlan(plan) {
     document.getElementById('modal_price').value = plan.price;
     document.getElementById('modal_videos').value = plan.videos_count;
     document.getElementById('modal_image_url').value = plan.image_url;
+    document.getElementById('modal_extra_images').value = plan.extra_images || '';
     document.getElementById('modal_img_preview').src = plan.image_url;
     document.getElementById('modal_telegram').value = plan.telegram_url;
     document.getElementById('modal_desc').value = plan.description;
