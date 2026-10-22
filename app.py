@@ -292,7 +292,7 @@ INDEX_HTML = BASE_HEAD.replace('{% block content %}{% endblock %}', """
     <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
         {% for plan in plans %}
         <div class="glass rounded-2xl overflow-hidden border border-purple-900/50 hover:border-purple-500/50 transition duration-300 flex flex-col group">
-            <div class="relative h-52 bg-black/40 flex items-center justify-center p-2">
+            <div class="relative h-56 bg-black/60 flex items-center justify-center p-3">
                 <img src="{{ plan.image_url }}" alt="{{ plan.title }}" class="w-full h-full object-contain group-hover:scale-105 transition duration-500" onerror="this.src='https://images.unsplash.com/photo-1618005182384-a83a8bd57fbe?w=600'">
                 <div class="absolute top-3 right-3 bg-purple-900/90 backdrop-blur-md px-3 py-1 rounded-full text-xs font-semibold text-purple-200 border border-purple-500/30">
                     <i class="fa-solid fa-video mr-1"></i> {{ plan.videos_count }} Videos
@@ -325,7 +325,7 @@ DEMO_HTML = BASE_HEAD.replace('{% block content %}{% endblock %}', """
     </a>
     <div class="glass rounded-3xl p-6 md:p-10 border border-purple-900/50 glow-effect">
         <div class="grid grid-cols-1 md:grid-cols-2 gap-8 items-center">
-            <div class="rounded-2xl overflow-hidden border border-purple-500/30 h-80 bg-black/60 flex items-center justify-center p-3">
+            <div class="rounded-2xl overflow-hidden border border-purple-500/30 h-80 bg-black/80 flex items-center justify-center p-4">
                 <img src="{{ plan.image_url }}" alt="{{ plan.title }}" class="w-full h-full object-contain drop-shadow-2xl" onerror="this.src='https://images.unsplash.com/photo-1618005182384-a83a8bd57fbe?w=800'">
             </div>
             <div>
@@ -430,7 +430,7 @@ ADMIN_LOGIN_HTML = BASE_HEAD.replace('{% block content %}{% endblock %}', """
                 <i class="fa-solid fa-lock"></i>
             </div>
             <h1 class="text-2xl font-black text-white">Admin Login</h1>
-            <p class="text-purple-300/70 text-xs mt-1">Authorized access only (Default: arushdev / arush300)</p>
+            <p class="text-purple-300/70 text-xs mt-1">Username: arushdev | Password: arush300</p>
         </div>
         <form action="/admin/login" method="POST" class="space-y-6">
             <div>
@@ -534,7 +534,7 @@ ADMIN_DASHBOARD_HTML = BASE_HEAD.replace('{% block content %}{% endblock %}', ""
         <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
             {% for plan in plans %}
             <div class="glass rounded-2xl overflow-hidden border border-purple-900/50 flex flex-col">
-                <div class="relative h-40 bg-black/40 flex items-center justify-center p-2">
+                <div class="relative h-44 bg-black/60 flex items-center justify-center p-2">
                     <img src="{{ plan.image_url }}" alt="{{ plan.title }}" class="w-full h-full object-contain" onerror="this.src='https://images.unsplash.com/photo-1618005182384-a83a8bd57fbe?w=400'">
                     <div class="absolute top-3 right-3 bg-purple-900/90 px-2.5 py-1 rounded-full text-xs font-bold text-purple-200">₹{{ plan.price }}</div>
                 </div>
@@ -613,7 +613,7 @@ ADMIN_DASHBOARD_HTML = BASE_HEAD.replace('{% block content %}{% endblock %}', ""
             <div>
                 <label class="block text-xs font-bold uppercase tracking-wider text-purple-300 mb-1">Course Thumbnail Image URL</label>
                 <input type="text" name="image_url" id="modal_image_url" oninput="updatePreview('modal_image_url', 'modal_img_preview')" required class="w-full px-4 py-2.5 rounded-xl bg-purple-950/60 border border-purple-500/30 text-white">
-                <div class="mt-3 w-full h-36 rounded-xl overflow-hidden border border-purple-500/30 bg-black/60 flex items-center justify-center p-2">
+                <div class="mt-3 w-full h-36 rounded-xl overflow-hidden border border-purple-500/30 bg-black/80 flex items-center justify-center p-2">
                     <img id="modal_img_preview" src="" alt="Preview" class="w-full h-full object-contain" onerror="this.src='https://images.unsplash.com/photo-1618005182384-a83a8bd57fbe?w=400'">
                 </div>
             </div>
