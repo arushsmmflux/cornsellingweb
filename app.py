@@ -41,14 +41,12 @@ class Order(db.Model):
     course_name = db.Column(db.String(200), nullable=False)
     amount = db.Column(db.Integer, nullable=False)
     utr = db.Column(db.String(50), nullable=False)
-    screenshot = db.Column(db.String(500), nullable=True)
     status = db.Column(db.String(20), default='Pending')
     created_at = db.Column(db.DateTime, default=datetime.utcnow)
 
 class Analytics(db.Model):
     id = db.Column(db.Integer, primary_key=True)
     total_visits = db.Column(db.Integer, default=0)
-    unique_visitors = db.Column(db.Integer, default=0)
 
 # --- INITIALIZE DATABASE & DEFAULT DATA ---
 with app.app_context():
@@ -66,7 +64,7 @@ with app.app_context():
         'upi_id': 'nexuspayments@oksbi',
         'upi_name': 'Nexus Digital Store',
         'telegram_support': 'https://t.me/NexusSupportBot',
-        'payment_instructions': '1. Scan QR or pay to UPI ID\n2. Copy 12-digit UTR number\n3. Submit UTR below for instant verification'
+        'payment_instructions': '1. Scan QR or pay to UPI ID\n2. Copy 12-digit UTR number\n3. Submit UTR below for verification'
     }
     for k, v in default_settings.items():
         if not Setting.query.filter_by(key=k).first():
@@ -91,7 +89,7 @@ with app.app_context():
             db.session.add(p)
             
     if not Analytics.query.first():
-        db.session.add(Analytics(total_visits=1, unique_visitors=1))
+        db.session.add(Analytics(total_visits=1))
     db.session.commit()
 
 def get_settings():
@@ -139,6 +137,7 @@ def payment_success(order_id):
 
 @app.route('/admin/login', methods=['GET', 'POST'])
 def admin_login():
+    settings = get_settings()
     if request.method == 'POST':
         username = request.form.get('username')
         password = request.form.get('password')
@@ -147,7 +146,7 @@ def admin_login():
             session['admin_logged'] = True
             return redirect(url_for('admin_dashboard'))
         flash('Invalid username or password!', 'error')
-    return render_template_string(ADMIN_LOGIN_HTML)
+    return render_template_string(ADMIN_LOGIN_HTML, settings=settings)
 
 @app.route('/admin/logout')
 def admin_logout():
@@ -265,7 +264,7 @@ BASE_HEAD = """
             <a href="/" class="flex items-center gap-3">
                 <span class="text-xl font-extrabold bg-gradient-to-r from-purple-400 to-blue-400 bg-clip-text text-transparent">{{ settings.site_name }}</span>
             </a>
-            <a href="/admin" class="px-4 py-2 text-sm font-semibold rounded-xl bg-purple-900/50 hover:bg-purple-800 text-purple-200 border border-purple-500/30 transition">
+            <a href="/admin/login" class="px-4 py-2 text-sm font-bold rounded-xl bg-purple-600 hover:bg-purple-500 text-white shadow-lg glow-effect transition">
                 <i class="fa-solid fa-lock mr-1.5"></i> Admin Panel
             </a>
         </div>
@@ -293,8 +292,8 @@ INDEX_HTML = BASE_HEAD.replace('{% block content %}{% endblock %}', """
     <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
         {% for plan in plans %}
         <div class="glass rounded-2xl overflow-hidden border border-purple-900/50 hover:border-purple-500/50 transition duration-300 flex flex-col group">
-            <div class="relative h-48 bg-purple-950">
-                <img src="{{ plan.image_url }}" alt="{{ plan.title }}" class="w-full h-full object-cover group-hover:scale-105 transition duration-500" onerror="this.src='https://images.unsplash.com/photo-1618005182384-a83a8bd57fbe?w=600'">
+            <div class="relative h-52 bg-black/40 flex items-center justify-center p-2">
+                <img src="{{ plan.image_url }}" alt="{{ plan.title }}" class="w-full h-full object-contain group-hover:scale-105 transition duration-500" onerror="this.src='https://images.unsplash.com/photo-1618005182384-a83a8bd57fbe?w=600'">
                 <div class="absolute top-3 right-3 bg-purple-900/90 backdrop-blur-md px-3 py-1 rounded-full text-xs font-semibold text-purple-200 border border-purple-500/30">
                     <i class="fa-solid fa-video mr-1"></i> {{ plan.videos_count }} Videos
                 </div>
@@ -326,8 +325,8 @@ DEMO_HTML = BASE_HEAD.replace('{% block content %}{% endblock %}', """
     </a>
     <div class="glass rounded-3xl p-6 md:p-10 border border-purple-900/50 glow-effect">
         <div class="grid grid-cols-1 md:grid-cols-2 gap-8 items-center">
-            <div class="rounded-2xl overflow-hidden border border-purple-500/30 h-72 bg-purple-950">
-                <img src="{{ plan.image_url }}" alt="{{ plan.title }}" class="w-full h-full object-cover" onerror="this.src='https://images.unsplash.com/photo-1618005182384-a83a8bd57fbe?w=600'">
+            <div class="rounded-2xl overflow-hidden border border-purple-500/30 h-80 bg-black/60 flex items-center justify-center p-3">
+                <img src="{{ plan.image_url }}" alt="{{ plan.title }}" class="w-full h-full object-contain drop-shadow-2xl" onerror="this.src='https://images.unsplash.com/photo-1618005182384-a83a8bd57fbe?w=800'">
             </div>
             <div>
                 <span class="px-3 py-1 rounded-full text-xs font-bold uppercase bg-purple-900/60 text-purple-300 border border-purple-500/30">
@@ -431,7 +430,7 @@ ADMIN_LOGIN_HTML = BASE_HEAD.replace('{% block content %}{% endblock %}', """
                 <i class="fa-solid fa-lock"></i>
             </div>
             <h1 class="text-2xl font-black text-white">Admin Login</h1>
-            <p class="text-purple-300/70 text-xs mt-1">Authorized access only</p>
+            <p class="text-purple-300/70 text-xs mt-1">Authorized access only (Default: arushdev / arush300)</p>
         </div>
         <form action="/admin/login" method="POST" class="space-y-6">
             <div>
@@ -535,8 +534,8 @@ ADMIN_DASHBOARD_HTML = BASE_HEAD.replace('{% block content %}{% endblock %}', ""
         <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
             {% for plan in plans %}
             <div class="glass rounded-2xl overflow-hidden border border-purple-900/50 flex flex-col">
-                <div class="relative h-40 bg-purple-950">
-                    <img src="{{ plan.image_url }}" alt="{{ plan.title }}" class="w-full h-full object-cover" onerror="this.src='https://images.unsplash.com/photo-1618005182384-a83a8bd57fbe?w=400'">
+                <div class="relative h-40 bg-black/40 flex items-center justify-center p-2">
+                    <img src="{{ plan.image_url }}" alt="{{ plan.title }}" class="w-full h-full object-contain" onerror="this.src='https://images.unsplash.com/photo-1618005182384-a83a8bd57fbe?w=400'">
                     <div class="absolute top-3 right-3 bg-purple-900/90 px-2.5 py-1 rounded-full text-xs font-bold text-purple-200">₹{{ plan.price }}</div>
                 </div>
                 <div class="p-5 flex flex-col flex-grow">
@@ -558,21 +557,15 @@ ADMIN_DASHBOARD_HTML = BASE_HEAD.replace('{% block content %}{% endblock %}', ""
         <div class="glass rounded-3xl p-6 md:p-8 border border-purple-900/50">
             <h2 class="text-xl font-bold text-white mb-6">Website & Payment Settings</h2>
             <form action="/admin/settings/update" method="POST" class="space-y-6">
-                <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
-                    <div>
-                        <label class="block text-xs font-bold uppercase tracking-wider text-purple-300 mb-2">Website Name</label>
-                        <input type="text" name="site_name" value="{{ settings.site_name }}" required class="w-full px-4 py-3 rounded-xl bg-purple-950/60 border border-purple-500/30 text-white">
-                    </div>
-                    <div>
-                        <label class="block text-xs font-bold uppercase tracking-wider text-purple-300 mb-2">Website Logo URL</label>
-                        <input type="text" name="site_logo" value="{{ settings.site_logo }}" required class="w-full px-4 py-3 rounded-xl bg-purple-950/60 border border-purple-500/30 text-white">
-                    </div>
+                <div>
+                    <label class="block text-xs font-bold uppercase tracking-wider text-purple-300 mb-2">Website Name (Top Priority)</label>
+                    <input type="text" name="site_name" value="{{ settings.site_name }}" required class="w-full px-4 py-3 rounded-xl bg-purple-950/60 border border-purple-500/30 text-white">
                 </div>
                 <div>
                     <label class="block text-xs font-bold uppercase tracking-wider text-purple-300 mb-2">Website Caption</label>
                     <input type="text" name="site_caption" value="{{ settings.site_caption }}" required class="w-full px-4 py-3 rounded-xl bg-purple-950/60 border border-purple-500/30 text-white">
                 </div>
-                <div class="grid grid-cols-1 md:grid-cols-2 gap-6 pt-4 border-t border-purple-900/50">
+                <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
                     <div>
                         <label class="block text-xs font-bold uppercase tracking-wider text-purple-300 mb-2">UPI ID</label>
                         <input type="text" name="upi_id" value="{{ settings.upi_id }}" required class="w-full px-4 py-3 rounded-xl bg-purple-950/60 border border-purple-500/30 text-white font-mono">
@@ -604,7 +597,7 @@ ADMIN_DASHBOARD_HTML = BASE_HEAD.replace('{% block content %}{% endblock %}', ""
         <form action="/admin/plan/save" method="POST" class="space-y-4">
             <input type="hidden" name="plan_id" id="modal_plan_id">
             <div>
-                <label class="block text-xs font-bold uppercase tracking-wider text-purple-300 mb-1">Course Title</label>
+                <label class="block text-xs font-bold uppercase tracking-wider text-purple-300 mb-1">Course Title (Top Priority)</label>
                 <input type="text" name="title" id="modal_title" required class="w-full px-4 py-2.5 rounded-xl bg-purple-950/60 border border-purple-500/30 text-white">
             </div>
             <div class="grid grid-cols-2 gap-4">
@@ -620,12 +613,12 @@ ADMIN_DASHBOARD_HTML = BASE_HEAD.replace('{% block content %}{% endblock %}', ""
             <div>
                 <label class="block text-xs font-bold uppercase tracking-wider text-purple-300 mb-1">Course Thumbnail Image URL</label>
                 <input type="text" name="image_url" id="modal_image_url" oninput="updatePreview('modal_image_url', 'modal_img_preview')" required class="w-full px-4 py-2.5 rounded-xl bg-purple-950/60 border border-purple-500/30 text-white">
-                <div class="mt-3 w-full h-36 rounded-xl overflow-hidden border border-purple-500/30 bg-purple-950 flex items-center justify-center">
-                    <img id="modal_img_preview" src="" alt="Preview" class="w-full h-full object-cover" onerror="this.src='https://images.unsplash.com/photo-1618005182384-a83a8bd57fbe?w=400'">
+                <div class="mt-3 w-full h-36 rounded-xl overflow-hidden border border-purple-500/30 bg-black/60 flex items-center justify-center p-2">
+                    <img id="modal_img_preview" src="" alt="Preview" class="w-full h-full object-contain" onerror="this.src='https://images.unsplash.com/photo-1618005182384-a83a8bd57fbe?w=400'">
                 </div>
             </div>
             <div>
-                <label class="block text-xs font-bold uppercase tracking-wider text-purple-300 mb-1">Telegram Demo URL</label>
+                <label class="block text-xs font-bold uppercase tracking-wider text-purple-300 mb-1">Telegram Demo URL (Bot / Link)</label>
                 <input type="text" name="telegram_url" id="modal_telegram" required class="w-full px-4 py-2.5 rounded-xl bg-purple-950/60 border border-purple-500/30 text-white">
             </div>
             <div>
