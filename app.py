@@ -1,4 +1,5 @@
 import os
+import json
 from datetime import datetime
 from flask import Flask, render_template_string, request, redirect, url_for, session, flash
 from flask_sqlalchemy import SQLAlchemy
@@ -70,7 +71,6 @@ with app.app_context():
         if not Setting.query.filter_by(key=k).first():
             db.session.add(Setting(key=k, value=v))
             
-    # 10 Course Plans with user provided links
     if Plan.query.count() == 0:
         initial_plans = [
             ("Python Mastery & Backend Pro", "Build robust backend applications, APIs, and automated systems with Python.", 199, 30, "https://i.ibb.co/Fb6S1mYg/course1.jpg"),
@@ -544,7 +544,7 @@ ADMIN_DASHBOARD_HTML = BASE_HEAD.replace('{% block content %}{% endblock %}', ""
                     <div class="mt-4 pt-4 border-t border-purple-900/50 flex items-center justify-between">
                         <span class="text-xs {% if plan.enabled %}text-emerald-400{% else %}text-red-400{% endif %} font-semibold">● {% if plan.enabled %}Active{% else %}Disabled{% endif %}</span>
                         <div class="flex gap-2">
-                            <button onclick='editPlan({{ plan|tojson|safe }})' class="px-3 py-1.5 rounded-lg bg-purple-800 hover:bg-purple-700 text-white text-xs font-bold transition">Edit</button>
+                            <button onclick='editPlan({{ {"id": plan.id, "title": plan.title, "description": plan.description, "price": plan.price, "videos_count": plan.videos_count, "image_url": plan.image_url, "telegram_url": plan.telegram_url, "demo_instructions": plan.demo_instructions, "enabled": plan.enabled}|tojson|safe }})' class="px-3 py-1.5 rounded-lg bg-purple-800 hover:bg-purple-700 text-white text-xs font-bold transition">Edit</button>
                             <a href="/admin/plan/delete/{{ plan.id }}" onclick="return confirm('Delete this plan?');" class="px-3 py-1.5 rounded-lg bg-red-950 hover:bg-red-900 text-red-200 text-xs font-bold transition">Delete</a>
                         </div>
                     </div>
