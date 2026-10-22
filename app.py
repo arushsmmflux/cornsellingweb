@@ -1,6 +1,6 @@
 import os
 from datetime import datetime
-from flask import Flask, render_template_string, request, redirect, url_for, session, flash, jsonify
+from flask import Flask, render_template_string, request, redirect, url_for, session, flash
 from flask_sqlalchemy import SQLAlchemy
 from werkzeug.security import generate_password_hash, check_password_hash
 
@@ -42,9 +42,8 @@ class Order(db.Model):
     amount = db.Column(db.Integer, nullable=False)
     utr = db.Column(db.String(50), nullable=False)
     screenshot = db.Column(db.String(500), nullable=True)
-    status = db.Column(db.String(20), default='Pending') # Pending, Approved, Rejected
+    status = db.Column(db.String(20), default='Pending')
     created_at = db.Column(db.DateTime, default=datetime.utcnow)
-    plan = db.relationship('Plan', backref=db.ref('orders', lazy=True))
 
 class Analytics(db.Model):
     id = db.Column(db.Integer, primary_key=True)
@@ -55,13 +54,11 @@ class Analytics(db.Model):
 with app.app_context():
     db.create_all()
     
-    # Default Admin
     if not Admin.query.filter_by(username='arushdev').first():
         hashed_pw = generate_password_hash('arush300')
         admin = Admin(username='arushdev', password_hash=hashed_pw)
         db.session.add(admin)
     
-    # Default Settings
     default_settings = {
         'site_name': 'NEXUS COURSES',
         'site_caption': 'Master High-Income Skills with Premium Curated Masterclasses',
@@ -75,7 +72,7 @@ with app.app_context():
         if not Setting.query.filter_by(key=k).first():
             db.session.add(Setting(key=k, value=v))
             
-    # Default 10 Plans with your provided ImgBB links
+    # 10 Course Plans with user provided links
     if Plan.query.count() == 0:
         initial_plans = [
             ("Python Mastery & Backend Pro", "Build robust backend applications, APIs, and automated systems with Python.", 199, 30, "https://i.ibb.co/Fb6S1mYg/course1.jpg"),
@@ -98,20 +95,15 @@ with app.app_context():
     db.session.commit()
 
 def get_settings():
-    settings = {}
-    for s in Setting.query.all():
-        settings[s.key] = s.value
-    return settings
+    return {s.key: s.value for s in Setting.query.all()}
 
-# --- FRONTEND ROUTES ---
+# --- ROUTES ---
 @app.route('/')
 def index():
-    # Track visit
     analytics = Analytics.query.first()
     if analytics:
         analytics.total_visits += 1
         db.session.commit()
-        
     settings = get_settings()
     plans = Plan.query.filter_by(enabled=True).order_by(Plan.order_index.asc()).all()
     return render_template_string(INDEX_HTML, settings=settings, plans=plans)
@@ -126,46 +118,17 @@ def demo_page(plan_id):
 def payment_page(plan_id):
     settings = get_settings()
     plan = Plan.query.get_or_404(plan_id)
-    
     if request.method == 'POST':
         utr = request.form.get('utr', '').strip()
         if not utr or len(utr) < 8:
             flash('Please enter a valid 12-digit UTR / Transaction Reference Number.', 'error')
             return redirect(url_for('payment_page', plan_id=plan_id))
-            
-        # Check duplicate UTR
-        existing = Order.query.filter_by(utr=utr).first()
-        if existing:
-            flash('This UTR has already been submitted. Please check your order status.', 'error')
-            return redirect(url_for('payment_page', plan_id=plan_id))
-            
-        order_id = 'NEXUS-' + datetime.utcnow().strftime('%Y%m%d%H%M%S') + '-' + str(plan.id)
         
-        # Handle Screenshot upload if present
-        screenshot_filename = None
-        if 'screenshot' in request.files:
-            file = request.files['screenshot']
-            if file and file.filename != '':
-                upload_folder = os.path.join('static', 'uploads')
-                os.makedirs(upload_folder, exist_ok=True)
-                filename = f"{order_id}_{file.filename}"
-                file.save(os.path.join(upload_folder, filename))
-                screenshot_filename = filename
-
-        new_order = Order(
-            order_id=order_id,
-            plan_id=plan.id,
-            course_name=plan.title,
-            amount=plan.price,
-            utr=utr,
-            screenshot=screenshot_filename,
-            status='Pending'
-        )
+        order_id = 'NEXUS-' + datetime.utcnow().strftime('%Y%m%d%H%M%S') + '-' + str(plan.id)
+        new_order = Order(order_id=order_id, plan_id=plan.id, course_name=plan.title, amount=plan.price, utr=utr, status='Pending')
         db.session.add(new_order)
         db.session.commit()
-        flash('Payment details submitted successfully! Awaiting admin verification.', 'success')
         return redirect(url_for('payment_success', order_id=order_id))
-
     return render_template_string(PAYMENT_HTML, settings=settings, plan=plan)
 
 @app.route('/success/<order_id>')
@@ -174,7 +137,6 @@ def payment_success(order_id):
     order = Order.query.filter_by(order_id=order_id).first_or_404()
     return render_template_string(SUCCESS_HTML, settings=settings, order=order)
 
-# --- ADMIN ROUTES ---
 @app.route('/admin/login', methods=['GET', 'POST'])
 def admin_login():
     if request.method == 'POST':
@@ -196,35 +158,22 @@ def admin_logout():
 def admin_dashboard():
     if not session.get('admin_logged'):
         return redirect(url_for('admin_login'))
-    
     settings = get_settings()
     plans = Plan.query.order_by(Plan.order_index.asc()).all()
     orders = Order.query.order_by(Order.created_at.desc()).all()
     analytics = Analytics.query.first()
-    
-    total_submissions = len(orders)
-    pending_payments = sum(1 for o in orders if o.status == 'Pending')
-    approved_payments = sum(1 for o in orders if o.status == 'Approved')
-    rejected_payments = sum(1 for o in orders if o.status == 'Rejected')
-    total_revenue = sum(o.amount for o in orders if o.status == 'Approved')
-    
     stats = {
         'visits': analytics.total_visits if analytics else 0,
-        'submissions': total_submissions,
-        'pending': pending_payments,
-        'approved': approved_payments,
-        'rejected': rejected_payments,
-        'revenue': total_revenue,
-        'plans_count': len(plans)
+        'pending': sum(1 for o in orders if o.status == 'Pending'),
+        'approved': sum(1 for o in orders if o.status == 'Approved'),
+        'revenue': sum(o.amount for o in orders if o.status == 'Approved')
     }
-    
     return render_template_string(ADMIN_DASHBOARD_HTML, settings=settings, plans=plans, orders=orders, stats=stats)
 
 @app.route('/admin/plan/save', methods=['POST'])
 def admin_save_plan():
     if not session.get('admin_logged'):
         return redirect(url_for('admin_login'))
-        
     plan_id = request.form.get('plan_id')
     title = request.form.get('title')
     description = request.form.get('description')
@@ -253,7 +202,6 @@ def admin_save_plan():
             enabled=enabled, order_index=max_order + 1
         )
         db.session.add(new_plan)
-        
     db.session.commit()
     flash('Course plan saved successfully!', 'success')
     return redirect(url_for('admin_dashboard'))
@@ -272,7 +220,6 @@ def admin_delete_plan(plan_id):
 def admin_update_settings():
     if not session.get('admin_logged'):
         return redirect(url_for('admin_login'))
-        
     for key in ['site_name', 'site_caption', 'site_logo', 'upi_id', 'upi_name', 'telegram_support', 'payment_instructions']:
         val = request.form.get(key)
         if val is not None:
@@ -281,16 +228,6 @@ def admin_update_settings():
                 setting.value = val
             else:
                 db.session.add(Setting(key=key, value=val))
-                
-    # Password change
-    new_username = request.form.get('admin_username')
-    new_password = request.form.get('admin_password')
-    admin = Admin.query.first()
-    if new_username:
-        admin.username = new_username
-    if new_password:
-        admin.password_hash = generate_password_hash(new_password)
-        
     db.session.commit()
     flash('Settings updated successfully!', 'success')
     return redirect(url_for('admin_dashboard'))
@@ -303,118 +240,60 @@ def admin_order_status(order_id, status):
     if status in ['Pending', 'Approved', 'Rejected']:
         order.status = status
         db.session.commit()
-        flash(f'Order {order.order_id} marked as {status}!', 'success')
     return redirect(url_for('admin_dashboard'))
 
-# --- HTML TEMPLATES (Embedded for instant execution) ---
+# --- HTML TEMPLATES ---
 BASE_HEAD = """
 <!DOCTYPE html>
 <html lang="en" class="dark">
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>{% block title %}{{ settings.site_name }}{% endblock %}</title>
+    <title>{{ settings.site_name }}</title>
     <script src="https://cdn.tailwindcss.com"></script>
-    <script>
-        tailwind.config = {
-            darkMode: 'class',
-            theme: {
-                extend: {
-                    colors: {
-                        darkbg: '#0a0118',
-                        cardbg: '#130528',
-                        deepcard: '#1b0838',
-                        neonpurple: '#9333ea',
-                        electricblue: '#3b82f6',
-                    }
-                }
-            }
-        }
-    </script>
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
     <style>
-        body { background-color: #0a0118; color: #f3f4f6; font-family: system-ui, -apple-system, sans-serif; }
+        body { background-color: #0a0118; color: #f3f4f6; font-family: system-ui, sans-serif; }
+        .glass { background: rgba(19, 5, 40, 0.7); backdrop-filter: blur(12px); border: 1px solid rgba(147, 51, 234, 0.2); }
         .glow-effect { box-shadow: 0 0 25px rgba(147, 51, 234, 0.25); }
         .glow-blue { box-shadow: 0 0 25px rgba(59, 130, 246, 0.25); }
-        .glass { background: rgba(19, 5, 40, 0.7); backdrop-filter: blur(12px); border: 1px solid rgba(147, 51, 234, 0.2); }
     </style>
 </head>
 <body class="min-h-screen flex flex-col">
-    <!-- Navbar -->
     <header class="glass sticky top-0 z-50 border-b border-purple-900/40">
         <div class="max-w-7xl mx-auto px-4 py-3 flex items-center justify-between">
             <a href="/" class="flex items-center gap-3">
-                <img src="{{ settings.site_logo }}" alt="Logo" class="w-10 h-10 rounded-xl object-cover border border-purple-500/40" onerror="this.src='https://images.unsplash.com/photo-1618005182384-a83a8bd57fbe?w=100'">
                 <span class="text-xl font-extrabold bg-gradient-to-r from-purple-400 to-blue-400 bg-clip-text text-transparent">{{ settings.site_name }}</span>
             </a>
-            <div class="flex items-center gap-3">
-                <a href="/admin" class="px-4 py-2 text-sm font-semibold rounded-xl bg-purple-900/50 hover:bg-purple-800 text-purple-200 border border-purple-500/30 transition shadow-lg">
-                    <i class="fa-solid fa-lock mr-1.5"></i> Admin Panel
-                </a>
-            </div>
+            <a href="/admin" class="px-4 py-2 text-sm font-semibold rounded-xl bg-purple-900/50 hover:bg-purple-800 text-purple-200 border border-purple-500/30 transition">
+                <i class="fa-solid fa-lock mr-1.5"></i> Admin Panel
+            </a>
         </div>
     </header>
-
-    <!-- Flash Messages -->
-    {% with messages = get_flashed_messages(with_categories=true) %}
-      {% if messages %}
-        <div class="max-w-4xl mx-auto px-4 mt-4 w-full">
-          {% for category, message in messages %}
-            <div class="p-4 rounded-xl text-sm font-medium {% if category == 'error' %}bg-red-950/80 border border-red-500/50 text-red-200{% else %}bg-purple-950/80 border border-purple-500/50 text-purple-200{% endif %} shadow-lg">
-              <i class="fa-solid fa-circle-info mr-2"></i> {{ message }}
-            </div>
-          {% endfor %}
-        </div>
-      {% endif %}
-    {% endwith %}
-
-    <main class="flex-grow">
-        {% block content %}{% endblock %}
-    </main>
-
-    <!-- Floating Telegram Support -->
+    <main class="flex-grow">{% block content %}{% endblock %}</main>
     <a href="{{ settings.telegram_support }}" target="_blank" class="fixed bottom-6 right-6 z-50 bg-blue-600 hover:bg-blue-500 text-white w-14 h-14 rounded-full flex items-center justify-center text-2xl shadow-2xl glow-blue transition transform hover:scale-110">
         <i class="fa-brands fa-telegram"></i>
     </a>
-
-    <!-- Footer -->
     <footer class="glass border-t border-purple-900/40 py-8 mt-16 text-center text-sm text-purple-300/60">
-        <p>&copy; 2026 {{ settings.site_name }}. All rights reserved. Secure Digital Masterclasses.</p>
+        <p>&copy; 2026 {{ settings.site_name }}. All rights reserved.</p>
     </footer>
 </body>
 </html>
 """
 
 INDEX_HTML = BASE_HEAD.replace('{% block content %}{% endblock %}', """
-<!-- Hero Section -->
-<section class="py-16 px-4 text-center relative overflow-hidden">
-    <div class="absolute inset-0 bg-gradient-to-b from-purple-900/10 via-transparent to-transparent pointer-events-none"></div>
-    <div class="max-w-4xl mx-auto relative z-10">
-        <span class="px-4 py-1.5 rounded-full text-xs font-bold uppercase tracking-wider bg-purple-900/60 text-purple-300 border border-purple-500/30">
-            🚀 Premium Learning Platform
-        </span>
-        <h1 class="text-4xl md:text-6xl font-black mt-6 tracking-tight bg-gradient-to-r from-white via-purple-200 to-blue-300 bg-clip-text text-transparent">
-            {{ settings.site_name }}
-        </h1>
-        <p class="mt-4 text-lg md:text-xl text-purple-200/70 max-w-2xl mx-auto">
-            {{ settings.site_caption }}
-        </p>
+<section class="py-16 px-4 text-center">
+    <div class="max-w-4xl mx-auto">
+        <span class="px-4 py-1.5 rounded-full text-xs font-bold uppercase tracking-wider bg-purple-900/60 text-purple-300 border border-purple-500/30">🚀 Premium Learning Platform</span>
+        <h1 class="text-4xl md:text-6xl font-black mt-6 tracking-tight bg-gradient-to-r from-white via-purple-200 to-blue-300 bg-clip-text text-transparent">{{ settings.site_name }}</h1>
+        <p class="mt-4 text-lg md:text-xl text-purple-200/70 max-w-2xl mx-auto">{{ settings.site_caption }}</p>
     </div>
 </section>
-
-<!-- Course Plans Grid -->
 <section class="max-w-7xl mx-auto px-4 pb-20">
-    <div class="flex items-center justify-between mb-8">
-        <h2 class="text-2xl font-bold flex items-center gap-2">
-            <i class="fa-solid fa-graduation-cap text-purple-400"></i> Featured Masterclasses
-        </h2>
-        <span class="text-sm text-purple-400 font-medium">{{ plans|length }} Courses Available</span>
-    </div>
-
     <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
         {% for plan in plans %}
         <div class="glass rounded-2xl overflow-hidden border border-purple-900/50 hover:border-purple-500/50 transition duration-300 flex flex-col group">
-            <div class="relative h-48 overflow-hidden bg-purple-950">
+            <div class="relative h-48 bg-purple-950">
                 <img src="{{ plan.image_url }}" alt="{{ plan.title }}" class="w-full h-full object-cover group-hover:scale-105 transition duration-500" onerror="this.src='https://images.unsplash.com/photo-1618005182384-a83a8bd57fbe?w=600'">
                 <div class="absolute top-3 right-3 bg-purple-900/90 backdrop-blur-md px-3 py-1 rounded-full text-xs font-semibold text-purple-200 border border-purple-500/30">
                     <i class="fa-solid fa-video mr-1"></i> {{ plan.videos_count }} Videos
@@ -423,19 +302,14 @@ INDEX_HTML = BASE_HEAD.replace('{% block content %}{% endblock %}', """
             <div class="p-6 flex flex-col flex-grow">
                 <h3 class="text-xl font-bold text-white group-hover:text-purple-300 transition">{{ plan.title }}</h3>
                 <p class="mt-2 text-sm text-purple-200/70 flex-grow line-clamp-2">{{ plan.description }}</p>
-                
                 <div class="mt-6 pt-4 border-t border-purple-900/40 flex items-center justify-between">
                     <div>
                         <span class="text-xs text-purple-300/60 block">Price</span>
                         <span class="text-2xl font-black text-white">₹{{ plan.price }}</span>
                     </div>
                     <div class="flex gap-2">
-                        <a href="/demo/{{ plan.id }}" class="px-3.5 py-2 rounded-xl bg-purple-950/80 hover:bg-purple-900 text-purple-200 text-sm font-semibold border border-purple-500/30 transition">
-                            View Demo
-                        </a>
-                        <a href="/payment/{{ plan.id }}" class="px-4 py-2 rounded-xl bg-gradient-to-r from-purple-600 to-blue-600 hover:from-purple-500 hover:to-blue-500 text-white text-sm font-bold shadow-lg glow-effect transition">
-                            Buy Now
-                        </a>
+                        <a href="/demo/{{ plan.id }}" class="px-3.5 py-2 rounded-xl bg-purple-950/80 hover:bg-purple-900 text-purple-200 text-sm font-semibold border border-purple-500/30 transition">View Demo</a>
+                        <a href="/payment/{{ plan.id }}" class="px-4 py-2 rounded-xl bg-gradient-to-r from-purple-600 to-blue-600 hover:from-purple-500 hover:to-blue-500 text-white text-sm font-bold shadow-lg glow-effect transition">Buy Now</a>
                     </div>
                 </div>
             </div>
@@ -450,10 +324,9 @@ DEMO_HTML = BASE_HEAD.replace('{% block content %}{% endblock %}', """
     <a href="/" class="inline-flex items-center gap-2 text-sm font-semibold text-purple-400 hover:text-purple-300 mb-6">
         <i class="fa-solid fa-arrow-left"></i> Back to Courses
     </a>
-
     <div class="glass rounded-3xl p-6 md:p-10 border border-purple-900/50 glow-effect">
         <div class="grid grid-cols-1 md:grid-cols-2 gap-8 items-center">
-            <div class="rounded-2xl overflow-hidden border border-purple-500/30 h-72">
+            <div class="rounded-2xl overflow-hidden border border-purple-500/30 h-72 bg-purple-950">
                 <img src="{{ plan.image_url }}" alt="{{ plan.title }}" class="w-full h-full object-cover" onerror="this.src='https://images.unsplash.com/photo-1618005182384-a83a8bd57fbe?w=600'">
             </div>
             <div>
@@ -468,19 +341,16 @@ DEMO_HTML = BASE_HEAD.replace('{% block content %}{% endblock %}', """
                 </div>
             </div>
         </div>
-
         <div class="mt-10 pt-8 border-t border-purple-900/40 text-center">
             <h3 class="text-xl font-bold mb-4">Want to test the course before buying?</h3>
             <a href="{{ plan.telegram_url }}" target="_blank" class="inline-flex items-center gap-3 px-8 py-4 rounded-2xl bg-blue-600 hover:bg-blue-500 text-white font-bold text-lg shadow-2xl glow-blue transition transform hover:scale-105">
                 <i class="fa-brands fa-telegram text-2xl"></i> WATCH DEMO ON TELEGRAM
             </a>
         </div>
-
         <div class="mt-10 p-6 rounded-2xl bg-purple-950/40 border border-purple-500/20">
             <h4 class="font-bold text-purple-300 mb-3"><i class="fa-solid fa-circle-question mr-2"></i> How to Watch the Demo</h4>
             <div class="text-sm text-purple-200/80 whitespace-pre-line leading-relaxed">{{ plan.demo_instructions }}</div>
         </div>
-
         <div class="mt-8 text-center">
             <a href="/payment/{{ plan.id }}" class="inline-block w-full md:w-auto px-10 py-4 rounded-2xl bg-gradient-to-r from-purple-600 to-blue-600 hover:from-purple-500 hover:to-blue-500 text-white font-black text-lg shadow-xl glow-effect transition">
                 BUY NOW — UNLOCK PREMIUM ACCESS (₹{{ plan.price }})
@@ -495,7 +365,6 @@ PAYMENT_HTML = BASE_HEAD.replace('{% block content %}{% endblock %}', """
     <a href="/demo/{{ plan.id }}" class="inline-flex items-center gap-2 text-sm font-semibold text-purple-400 hover:text-purple-300 mb-6">
         <i class="fa-solid fa-arrow-left"></i> Back to Course
     </a>
-
     <div class="glass rounded-3xl p-6 md:p-8 border border-purple-900/50 glow-effect">
         <div class="text-center pb-6 border-b border-purple-900/40">
             <span class="px-3 py-1 rounded-full text-xs font-bold uppercase bg-emerald-950 text-emerald-300 border border-emerald-500/30">
@@ -504,38 +373,26 @@ PAYMENT_HTML = BASE_HEAD.replace('{% block content %}{% endblock %}', """
             <h1 class="text-2xl font-black text-white mt-3">{{ plan.title }}</h1>
             <p class="text-purple-300/70 text-sm mt-1">Amount Payable: <strong class="text-white text-lg">₹{{ plan.price }}</strong></p>
         </div>
-
-        <!-- QR Code Section -->
         <div class="my-8 text-center bg-purple-950/60 p-6 rounded-2xl border border-purple-500/30">
-            <p class="text-xs font-semibold text-purple-300 mb-4">Scan QR with any UPI App (GPay, PhonePe, Paytm, BHIM)</p>
+            <p class="text-xs font-semibold text-purple-300 mb-4">Scan QR with any UPI App (GPay, PhonePe, Paytm)</p>
             <div class="inline-block bg-white p-3 rounded-2xl shadow-xl">
-                <img id="upi-qr" src="https://api.qrserver.com/v1/create-qr-code/?size=200x200&data=upi://pay?pa={{ settings.upi_id }}&pn={{ settings.upi_name }}&am={{ plan.price }}&cu=INR" alt="UPI QR Code" class="w-48 h-48 mx-auto rounded-xl">
+                <img src="https://api.qrserver.com/v1/create-qr-code/?size=200x200&data=upi://pay?pa={{ settings.upi_id }}&pn={{ settings.upi_name }}&am={{ plan.price }}&cu=INR" alt="UPI QR Code" class="w-48 h-48 mx-auto rounded-xl">
             </div>
             <div class="mt-4 flex items-center justify-center gap-2">
-                <span class="text-sm font-mono text-purple-200 bg-purple-900/60 px-4 py-2 rounded-xl border border-purple-500/30" id="upi-id-text">{{ settings.upi_id }}</span>
+                <span class="text-sm font-mono text-purple-200 bg-purple-900/60 px-4 py-2 rounded-xl border border-purple-500/30">{{ settings.upi_id }}</span>
                 <button onclick="navigator.clipboard.writeText('{{ settings.upi_id }}'); alert('UPI ID Copied!');" class="px-3 py-2 bg-purple-800 hover:bg-purple-700 text-white rounded-xl text-sm transition">
                     <i class="fa-solid fa-copy"></i>
                 </button>
             </div>
         </div>
-
-        <!-- Payment Instructions -->
         <div class="mb-8 p-4 rounded-xl bg-purple-950/40 border border-purple-500/20 text-xs text-purple-300/80 leading-relaxed whitespace-pre-line">
             {{ settings.payment_instructions }}
         </div>
-
-        <!-- UTR Form -->
-        <form action="/payment/{{ plan.id }}" method="POST" enctype="multipart/form-data" class="space-y-6">
+        <form action="/payment/{{ plan.id }}" method="POST" class="space-y-6">
             <div>
                 <label class="block text-sm font-bold text-purple-200 mb-2">Enter Your 12-Digit UTR / Transaction Reference Number *</label>
                 <input type="text" name="utr" required placeholder="e.g. 432156789012" class="w-full px-4 py-3 rounded-xl bg-purple-950/60 border border-purple-500/30 text-white focus:outline-none focus:border-purple-500 transition font-mono">
             </div>
-
-            <div>
-                <label class="block text-sm font-bold text-purple-200 mb-2">Upload Payment Screenshot (Optional but Recommended)</label>
-                <input type="file" name="screenshot" accept="image/*" class="w-full px-4 py-2.5 rounded-xl bg-purple-950/60 border border-purple-500/30 text-sm text-purple-300 file:mr-4 file:py-2 file:px-4 file:rounded-xl file:border-0 file:text-xs file:font-bold file:bg-purple-800 file:text-white hover:file:bg-purple-700 transition">
-            </div>
-
             <button type="submit" class="w-full py-4 rounded-2xl bg-gradient-to-r from-purple-600 to-blue-600 hover:from-purple-500 hover:to-blue-500 text-white font-black text-lg shadow-xl glow-effect transition">
                 SUBMIT PAYMENT DETAILS
             </button>
@@ -551,8 +408,7 @@ SUCCESS_HTML = BASE_HEAD.replace('{% block content %}{% endblock %}', """
             <i class="fa-solid fa-check"></i>
         </div>
         <h1 class="text-2xl font-black text-white">Payment Details Submitted!</h1>
-        <p class="text-purple-300/80 text-sm mt-2">Your submission has been securely recorded and is awaiting manual verification by the administrator.</p>
-
+        <p class="text-purple-300/80 text-sm mt-2">Your submission has been securely recorded and is awaiting manual verification.</p>
         <div class="my-6 p-4 rounded-2xl bg-purple-950/60 border border-purple-500/30 text-left space-y-2 text-sm">
             <div class="flex justify-between"><span class="text-purple-400">Order ID:</span> <span class="font-mono text-white">{{ order.order_id }}</span></div>
             <div class="flex justify-between"><span class="text-purple-400">Course:</span> <span class="text-white font-bold">{{ order.course_name }}</span></div>
@@ -560,7 +416,6 @@ SUCCESS_HTML = BASE_HEAD.replace('{% block content %}{% endblock %}', """
             <div class="flex justify-between"><span class="text-purple-400">UTR Number:</span> <span class="font-mono text-white">{{ order.utr }}</span></div>
             <div class="flex justify-between"><span class="text-purple-400">Status:</span> <span class="px-2 py-0.5 rounded-full text-xs font-bold bg-amber-950 text-amber-300 border border-amber-500/30">{{ order.status }}</span></div>
         </div>
-
         <a href="/" class="inline-block px-8 py-3.5 rounded-xl bg-purple-900 hover:bg-purple-800 text-white font-bold text-sm border border-purple-500/30 transition">
             Return to Homepage
         </a>
@@ -578,7 +433,6 @@ ADMIN_LOGIN_HTML = BASE_HEAD.replace('{% block content %}{% endblock %}', """
             <h1 class="text-2xl font-black text-white">Admin Login</h1>
             <p class="text-purple-300/70 text-xs mt-1">Authorized access only</p>
         </div>
-
         <form action="/admin/login" method="POST" class="space-y-6">
             <div>
                 <label class="block text-xs font-bold uppercase tracking-wider text-purple-300 mb-2">Username</label>
@@ -607,8 +461,6 @@ ADMIN_DASHBOARD_HTML = BASE_HEAD.replace('{% block content %}{% endblock %}', ""
             <i class="fa-solid fa-right-from-bracket mr-1.5"></i> Logout
         </a>
     </div>
-
-    <!-- Stats Grid -->
     <div class="grid grid-cols-2 md:grid-cols-4 gap-4 mb-10">
         <div class="glass p-5 rounded-2xl border border-purple-900/50">
             <span class="text-xs text-purple-400 font-semibold uppercase">Total Visits</span>
@@ -627,20 +479,14 @@ ADMIN_DASHBOARD_HTML = BASE_HEAD.replace('{% block content %}{% endblock %}', ""
             <h3 class="text-2xl font-black text-white mt-1">₹{{ stats.revenue }}</h3>
         </div>
     </div>
-
-    <!-- Tabs Navigation -->
     <div class="flex gap-2 border-b border-purple-900/50 pb-4 mb-8 overflow-x-auto">
         <button onclick="switchTab('orders')" id="tab-btn-orders" class="px-5 py-2.5 rounded-xl font-bold text-sm bg-purple-900 text-white shadow-md transition">Orders ({{ orders|length }})</button>
         <button onclick="switchTab('plans')" id="tab-btn-plans" class="px-5 py-2.5 rounded-xl font-bold text-sm bg-purple-950/60 text-purple-300 hover:bg-purple-900/50 transition">Course Plans ({{ plans|length }})</button>
         <button onclick="switchTab('settings')" id="tab-btn-settings" class="px-5 py-2.5 rounded-xl font-bold text-sm bg-purple-950/60 text-purple-300 hover:bg-purple-900/50 transition">Settings & UPI</button>
     </div>
-
-    <!-- TAB 1: ORDERS -->
     <div id="tab-orders" class="space-y-6">
         <div class="glass rounded-2xl border border-purple-900/50 overflow-hidden">
-            <div class="p-5 border-b border-purple-900/50 font-bold text-white flex items-center justify-between">
-                <span>Payment Orders & UTR Submissions</span>
-            </div>
+            <div class="p-5 border-b border-purple-900/50 font-bold text-white">Payment Orders & UTR Submissions</div>
             <div class="overflow-x-auto">
                 <table class="w-full text-left border-collapse text-sm">
                     <thead>
@@ -649,7 +495,6 @@ ADMIN_DASHBOARD_HTML = BASE_HEAD.replace('{% block content %}{% endblock %}', ""
                             <th class="p-4">Course</th>
                             <th class="p-4">Amount</th>
                             <th class="p-4">UTR Number</th>
-                            <th class="p-4">Screenshot</th>
                             <th class="p-4">Status</th>
                             <th class="p-4 text-center">Actions</th>
                         </tr>
@@ -665,69 +510,43 @@ ADMIN_DASHBOARD_HTML = BASE_HEAD.replace('{% block content %}{% endblock %}', ""
                             <td class="p-4 font-bold text-white">₹{{ order.amount }}</td>
                             <td class="p-4 font-mono text-purple-300">{{ order.utr }}</td>
                             <td class="p-4">
-                                {% if order.screenshot %}
-                                <a href="/static/uploads/{{ order.screenshot }}" target="_blank" class="text-blue-400 hover:underline text-xs flex items-center gap-1 font-semibold">
-                                    <i class="fa-solid fa-image"></i> View
-                                </a>
-                                {% else %}
-                                <span class="text-xs text-purple-400/50">None</span>
-                                {% endif %}
-                            </td>
-                            <td class="p-4">
-                                <span class="px-2.5 py-1 rounded-full text-xs font-bold {% if order.status == 'Approved' %}bg-emerald-950 text-emerald-300 border border-emerald-500/30{% elif order.status == 'Rejected' %}bg-red-950 text-red-300 border border-red-500/30{% else %}bg-amber-950 text-amber-300 border border-amber-500/30{% endif %}">
-                                    {{ order.status }}
-                                </span>
+                                <span class="px-2.5 py-1 rounded-full text-xs font-bold {% if order.status == 'Approved' %}bg-emerald-950 text-emerald-300 border border-emerald-500/30{% elif order.status == 'Rejected' %}bg-red-950 text-red-300 border border-red-500/30{% else %}bg-amber-950 text-amber-300 border border-amber-500/30{% endif %}">{{ order.status }}</span>
                             </td>
                             <td class="p-4 text-center">
                                 <div class="flex items-center justify-center gap-2">
-                                    <a href="/admin/order/status/{{ order.id }}/Approved" class="px-2.5 py-1.5 rounded-lg bg-emerald-600 hover:bg-emerald-500 text-white text-xs font-bold transition" title="Approve">
-                                        <i class="fa-solid fa-check"></i>
-                                    </a>
-                                    <a href="/admin/order/status/{{ order.id }}/Rejected" class="px-2.5 py-1.5 rounded-lg bg-red-600 hover:bg-red-500 text-white text-xs font-bold transition" title="Reject">
-                                        <i class="fa-solid fa-xmark"></i>
-                                    </a>
+                                    <a href="/admin/order/status/{{ order.id }}/Approved" class="px-2.5 py-1.5 rounded-lg bg-emerald-600 hover:bg-emerald-500 text-white text-xs font-bold transition" title="Approve"><i class="fa-solid fa-check"></i></a>
+                                    <a href="/admin/order/status/{{ order.id }}/Rejected" class="px-2.5 py-1.5 rounded-lg bg-red-600 hover:bg-red-500 text-white text-xs font-bold transition" title="Reject"><i class="fa-solid fa-xmark"></i></a>
                                 </div>
                             </td>
                         </tr>
                         {% else %}
-                        <tr>
-                            <td colspan="7" class="p-8 text-center text-purple-400/60">No payment orders submitted yet.</td>
-                        </tr>
+                        <tr><td colspan="6" class="p-8 text-center text-purple-400/60">No payment orders submitted yet.</td></tr>
                         {% endfor %}
                     </tbody>
                 </table>
             </div>
         </div>
     </div>
-
-    <!-- TAB 2: PLANS -->
     <div id="tab-plans" class="hidden space-y-6">
         <div class="flex justify-between items-center">
             <h2 class="text-xl font-bold text-white">Manage Course Plans</h2>
-            <button onclick="openPlanModal()" class="px-4 py-2.5 rounded-xl bg-purple-600 hover:bg-purple-500 text-white font-bold text-sm shadow-lg transition">
-                <i class="fa-solid fa-plus mr-1.5"></i> Add New Plan
-            </button>
+            <button onclick="openPlanModal()" class="px-4 py-2.5 rounded-xl bg-purple-600 hover:bg-purple-500 text-white font-bold text-sm shadow-lg transition"><i class="fa-solid fa-plus mr-1.5"></i> Add New Plan</button>
         </div>
-
         <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
             {% for plan in plans %}
             <div class="glass rounded-2xl overflow-hidden border border-purple-900/50 flex flex-col">
                 <div class="relative h-40 bg-purple-950">
                     <img src="{{ plan.image_url }}" alt="{{ plan.title }}" class="w-full h-full object-cover" onerror="this.src='https://images.unsplash.com/photo-1618005182384-a83a8bd57fbe?w=400'">
-                    <div class="absolute top-3 right-3 bg-purple-900/90 px-2.5 py-1 rounded-full text-xs font-bold text-purple-200">
-                        ₹{{ plan.price }}
-                    </div>
+                    <div class="absolute top-3 right-3 bg-purple-900/90 px-2.5 py-1 rounded-full text-xs font-bold text-purple-200">₹{{ plan.price }}</div>
                 </div>
                 <div class="p-5 flex flex-col flex-grow">
                     <h3 class="font-bold text-white text-lg">{{ plan.title }}</h3>
                     <p class="text-xs text-purple-300/70 mt-1 flex-grow line-clamp-2">{{ plan.description }}</p>
                     <div class="mt-4 pt-4 border-t border-purple-900/50 flex items-center justify-between">
-                        <span class="text-xs {% if plan.enabled %}text-emerald-400{% else %}text-red-400{% endif %} font-semibold">
-                            ● {% if plan.enabled %}Active{% else %}Disabled{% endif %}
-                        </span>
+                        <span class="text-xs {% if plan.enabled %}text-emerald-400{% else %}text-red-400{% endif %} font-semibold">● {% if plan.enabled %}Active{% else %}Disabled{% endif %}</span>
                         <div class="flex gap-2">
                             <button onclick='editPlan({{ plan|tojson|safe }})' class="px-3 py-1.5 rounded-lg bg-purple-800 hover:bg-purple-700 text-white text-xs font-bold transition">Edit</button>
-                            <a href="/admin/plan/delete/{{ plan.id }}" onclick="return confirm('Are you sure you want to delete this plan?');" class="px-3 py-1.5 rounded-lg bg-red-950 hover:bg-red-900 text-red-200 text-xs font-bold transition">Delete</a>
+                            <a href="/admin/plan/delete/{{ plan.id }}" onclick="return confirm('Delete this plan?');" class="px-3 py-1.5 rounded-lg bg-red-950 hover:bg-red-900 text-red-200 text-xs font-bold transition">Delete</a>
                         </div>
                     </div>
                 </div>
@@ -735,8 +554,6 @@ ADMIN_DASHBOARD_HTML = BASE_HEAD.replace('{% block content %}{% endblock %}', ""
             {% endfor %}
         </div>
     </div>
-
-    <!-- TAB 3: SETTINGS -->
     <div id="tab-settings" class="hidden space-y-6">
         <div class="glass rounded-3xl p-6 md:p-8 border border-purple-900/50">
             <h2 class="text-xl font-bold text-white mb-6">Website & Payment Settings</h2>
@@ -747,19 +564,14 @@ ADMIN_DASHBOARD_HTML = BASE_HEAD.replace('{% block content %}{% endblock %}', ""
                         <input type="text" name="site_name" value="{{ settings.site_name }}" required class="w-full px-4 py-3 rounded-xl bg-purple-950/60 border border-purple-500/30 text-white">
                     </div>
                     <div>
-                        <label class="block text-xs font-bold uppercase tracking-wider text-purple-300 mb-2">Website Logo URL (ImgBB)</label>
-                        <input type="text" name="site_logo" id="setting_logo_input" value="{{ settings.site_logo }}" oninput="updatePreview('setting_logo_input', 'setting_logo_preview')" class="w-full px-4 py-3 rounded-xl bg-purple-950/60 border border-purple-500/30 text-white">
-                        <div class="mt-2 w-12 h-12 rounded-xl overflow-hidden border border-purple-500/30 bg-purple-950">
-                            <img id="setting_logo_preview" src="{{ settings.site_logo }}" class="w-full h-full object-cover" onerror="this.src='https://images.unsplash.com/photo-1618005182384-a83a8bd57fbe?w=100'">
-                        </div>
+                        <label class="block text-xs font-bold uppercase tracking-wider text-purple-300 mb-2">Website Logo URL</label>
+                        <input type="text" name="site_logo" value="{{ settings.site_logo }}" required class="w-full px-4 py-3 rounded-xl bg-purple-950/60 border border-purple-500/30 text-white">
                     </div>
                 </div>
-
                 <div>
                     <label class="block text-xs font-bold uppercase tracking-wider text-purple-300 mb-2">Website Caption</label>
                     <input type="text" name="site_caption" value="{{ settings.site_caption }}" required class="w-full px-4 py-3 rounded-xl bg-purple-950/60 border border-purple-500/30 text-white">
                 </div>
-
                 <div class="grid grid-cols-1 md:grid-cols-2 gap-6 pt-4 border-t border-purple-900/50">
                     <div>
                         <label class="block text-xs font-bold uppercase tracking-wider text-purple-300 mb-2">UPI ID</label>
@@ -770,52 +582,31 @@ ADMIN_DASHBOARD_HTML = BASE_HEAD.replace('{% block content %}{% endblock %}', ""
                         <input type="text" name="upi_name" value="{{ settings.upi_name }}" required class="w-full px-4 py-3 rounded-xl bg-purple-950/60 border border-purple-500/30 text-white">
                     </div>
                 </div>
-
                 <div>
                     <label class="block text-xs font-bold uppercase tracking-wider text-purple-300 mb-2">Telegram Support Bot URL</label>
                     <input type="text" name="telegram_support" value="{{ settings.telegram_support }}" required class="w-full px-4 py-3 rounded-xl bg-purple-950/60 border border-purple-500/30 text-white">
                 </div>
-
                 <div>
                     <label class="block text-xs font-bold uppercase tracking-wider text-purple-300 mb-2">Payment Instructions</label>
                     <textarea name="payment_instructions" rows="3" class="w-full px-4 py-3 rounded-xl bg-purple-950/60 border border-purple-500/30 text-white">{{ settings.payment_instructions }}</textarea>
                 </div>
-
-                <div class="pt-4 border-t border-purple-900/50 grid grid-cols-1 md:grid-cols-2 gap-6">
-                    <div>
-                        <label class="block text-xs font-bold uppercase tracking-wider text-purple-300 mb-2">Change Admin Username</label>
-                        <input type="text" name="admin_username" placeholder="Leave blank to keep current" class="w-full px-4 py-3 rounded-xl bg-purple-950/60 border border-purple-500/30 text-white">
-                    </div>
-                    <div>
-                        <label class="block text-xs font-bold uppercase tracking-wider text-purple-300 mb-2">Change Admin Password</label>
-                        <input type="password" name="admin_password" placeholder="Leave blank to keep current" class="w-full px-4 py-3 rounded-xl bg-purple-950/60 border border-purple-500/30 text-white">
-                    </div>
-                </div>
-
-                <button type="submit" class="px-8 py-3.5 rounded-xl bg-gradient-to-r from-purple-600 to-blue-600 hover:from-purple-500 hover:to-blue-500 text-white font-bold shadow-xl transition">
-                    SAVE CHANGES
-                </button>
+                <button type="submit" class="px-8 py-3.5 rounded-xl bg-gradient-to-r from-purple-600 to-blue-600 text-white font-bold shadow-xl transition">SAVE CHANGES</button>
             </form>
         </div>
     </div>
 </div>
-
-<!-- Plan Add/Edit Modal -->
 <div id="plan-modal" class="fixed inset-0 z-50 hidden bg-black/80 backdrop-blur-md flex items-center justify-center p-4 overflow-y-auto">
     <div class="glass max-w-xl w-full rounded-3xl p-6 md:p-8 border border-purple-900/50 my-8">
         <div class="flex justify-between items-center mb-6">
             <h3 id="modal-title" class="text-xl font-bold text-white">Add New Course Plan</h3>
             <button onclick="closePlanModal()" class="text-purple-400 hover:text-white text-xl"><i class="fa-solid fa-xmark"></i></button>
         </div>
-
         <form action="/admin/plan/save" method="POST" class="space-y-4">
             <input type="hidden" name="plan_id" id="modal_plan_id">
-            
             <div>
                 <label class="block text-xs font-bold uppercase tracking-wider text-purple-300 mb-1">Course Title</label>
                 <input type="text" name="title" id="modal_title" required class="w-full px-4 py-2.5 rounded-xl bg-purple-950/60 border border-purple-500/30 text-white">
             </div>
-
             <div class="grid grid-cols-2 gap-4">
                 <div>
                     <label class="block text-xs font-bold uppercase tracking-wider text-purple-300 mb-1">Price (₹)</label>
@@ -826,36 +617,29 @@ ADMIN_DASHBOARD_HTML = BASE_HEAD.replace('{% block content %}{% endblock %}', ""
                     <input type="number" name="videos_count" id="modal_videos" required class="w-full px-4 py-2.5 rounded-xl bg-purple-950/60 border border-purple-500/30 text-white">
                 </div>
             </div>
-
             <div>
-                <label class="block text-xs font-bold uppercase tracking-wider text-purple-300 mb-1">Course Thumbnail Image URL (ImgBB)</label>
+                <label class="block text-xs font-bold uppercase tracking-wider text-purple-300 mb-1">Course Thumbnail Image URL</label>
                 <input type="text" name="image_url" id="modal_image_url" oninput="updatePreview('modal_image_url', 'modal_img_preview')" required class="w-full px-4 py-2.5 rounded-xl bg-purple-950/60 border border-purple-500/30 text-white">
-                <!-- Live Image Preview Container -->
                 <div class="mt-3 w-full h-36 rounded-xl overflow-hidden border border-purple-500/30 bg-purple-950 flex items-center justify-center">
                     <img id="modal_img_preview" src="" alt="Preview" class="w-full h-full object-cover" onerror="this.src='https://images.unsplash.com/photo-1618005182384-a83a8bd57fbe?w=400'">
                 </div>
             </div>
-
             <div>
                 <label class="block text-xs font-bold uppercase tracking-wider text-purple-300 mb-1">Telegram Demo URL</label>
                 <input type="text" name="telegram_url" id="modal_telegram" required class="w-full px-4 py-2.5 rounded-xl bg-purple-950/60 border border-purple-500/30 text-white">
             </div>
-
             <div>
                 <label class="block text-xs font-bold uppercase tracking-wider text-purple-300 mb-1">Course Description</label>
                 <textarea name="description" id="modal_desc" rows="3" required class="w-full px-4 py-2.5 rounded-xl bg-purple-950/60 border border-purple-500/30 text-white"></textarea>
             </div>
-
             <div>
                 <label class="block text-xs font-bold uppercase tracking-wider text-purple-300 mb-1">Demo Instructions</label>
                 <textarea name="demo_instructions" id="modal_instructions" rows="2" required class="w-full px-4 py-2.5 rounded-xl bg-purple-950/60 border border-purple-500/30 text-white"></textarea>
             </div>
-
             <div class="flex items-center gap-3 pt-2">
                 <input type="checkbox" name="enabled" id="modal_enabled" checked class="w-5 h-5 accent-purple-600 rounded">
                 <label class="text-sm font-semibold text-purple-200">Enable this plan on homepage</label>
             </div>
-
             <div class="pt-4 flex gap-3">
                 <button type="submit" class="flex-1 py-3 rounded-xl bg-purple-600 hover:bg-purple-500 text-white font-bold transition">Save Plan</button>
                 <button type="button" onclick="closePlanModal()" class="px-6 py-3 rounded-xl bg-purple-950 hover:bg-purple-900 text-purple-300 font-bold transition">Cancel</button>
@@ -863,29 +647,22 @@ ADMIN_DASHBOARD_HTML = BASE_HEAD.replace('{% block content %}{% endblock %}', ""
         </form>
     </div>
 </div>
-
 <script>
 function switchTab(tab) {
     document.getElementById('tab-orders').classList.add('hidden');
     document.getElementById('tab-plans').classList.add('hidden');
     document.getElementById('tab-settings').classList.add('hidden');
-    
     document.getElementById('tab-btn-orders').className = 'px-5 py-2.5 rounded-xl font-bold text-sm bg-purple-950/60 text-purple-300 hover:bg-purple-900/50 transition';
     document.getElementById('tab-btn-plans').className = 'px-5 py-2.5 rounded-xl font-bold text-sm bg-purple-950/60 text-purple-300 hover:bg-purple-900/50 transition';
     document.getElementById('tab-btn-settings').className = 'px-5 py-2.5 rounded-xl font-bold text-sm bg-purple-950/60 text-purple-300 hover:bg-purple-900/50 transition';
-    
     document.getElementById('tab-' + tab).classList.remove('hidden');
     document.getElementById('tab-btn-' + tab).className = 'px-5 py-2.5 rounded-xl font-bold text-sm bg-purple-900 text-white shadow-md transition';
 }
-
 function updatePreview(inputId, previewId) {
     const url = document.getElementById(inputId).value;
     const preview = document.getElementById(previewId);
-    if(url) {
-        preview.src = url;
-    }
+    if(url) { preview.src = url; }
 }
-
 function openPlanModal() {
     document.getElementById('modal-title').innerText = 'Add New Course Plan';
     document.getElementById('modal_plan_id').value = '';
@@ -900,7 +677,6 @@ function openPlanModal() {
     document.getElementById('modal_enabled').checked = true;
     document.getElementById('plan-modal').classList.remove('hidden');
 }
-
 function editPlan(plan) {
     document.getElementById('modal-title').innerText = 'Edit Course Plan';
     document.getElementById('modal_plan_id').value = plan.id;
@@ -915,7 +691,6 @@ function editPlan(plan) {
     document.getElementById('modal_enabled').checked = plan.enabled;
     document.getElementById('plan-modal').classList.remove('hidden');
 }
-
 function closePlanModal() {
     document.getElementById('plan-modal').classList.add('hidden');
 }
