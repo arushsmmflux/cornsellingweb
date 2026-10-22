@@ -30,8 +30,8 @@ class Plan(db.Model):
     description = db.Column(db.Text, nullable=False)
     price = db.Column(db.Integer, nullable=False, default=199)
     videos_count = db.Column(db.Integer, nullable=False, default=25)
-    image_url = db.Column(db.String(500), nullable=False) # Main Thumbnail
-    extra_images = db.Column(db.Text, nullable=True) # Multiple Demo Images separated by comma or newline
+    image_url = db.Column(db.String(500), nullable=False)
+    extra_images = db.Column(db.Text, nullable=True) # Comma separated extra preview images
     telegram_url = db.Column(db.String(500), default="https://t.me/NexusDemoBot")
     demo_instructions = db.Column(db.Text, default="1. Click Watch Demo on Telegram\n2. Open Telegram bot\n3. Follow instructions to view demo")
     enabled = db.Column(db.Boolean, default=True)
@@ -44,6 +44,7 @@ class Order(db.Model):
     course_name = db.Column(db.String(200), nullable=False)
     amount = db.Column(db.Integer, nullable=False)
     utr = db.Column(db.String(50), nullable=False)
+    screenshot = db.Column(db.String(500), nullable=True)
     status = db.Column(db.String(20), default='Pending')
     created_at = db.Column(db.DateTime, default=datetime.utcnow)
 
@@ -69,7 +70,7 @@ with app.app_context():
         'telegram_support': 'https://t.me/NexusSupportBot',
         'telegram_bot_token': '',
         'telegram_chat_id': '',
-        'payment_instructions': '1. Scan QR or pay to UPI ID\n2. Copy 12-digit UTR number\n3. Submit UTR below for verification'
+        'payment_instructions': '1. Scan QR or pay to UPI ID\n2. Copy 12-digit UTR number\n3. Submit UTR and screenshot below for verification'
     }
     for k, v in default_settings.items():
         if not Setting.query.filter_by(key=k).first():
@@ -111,8 +112,7 @@ def send_telegram_notification(order_info):
             f"📚 *Course:* {order_info['course_name']}\n"
             f"💰 *Amount:* ₹{order_info['amount']}\n"
             f"🔢 *UTR Number:* `{order_info['utr']}`\n"
-            f"⏳ *Status:* Pending Verification\n\n"
-            f"Please check your Admin Dashboard to approve or reject."
+            f"⏳ *Status:* Pending Verification"
         )
         url = f"https://api.telegram.org/bot{token}/sendMessage"
         try:
@@ -149,11 +149,29 @@ def payment_page(plan_id):
             return redirect(url_for('payment_page', plan_id=plan_id))
         
         order_id = 'NEXUS-' + datetime.utcnow().strftime('%Y%m%d%H%M%S') + '-' + str(plan.id)
-        new_order = Order(order_id=order_id, plan_id=plan.id, course_name=plan.title, amount=plan.price, utr=utr, status='Pending')
+        
+        screenshot_filename = None
+        if 'screenshot' in request.files:
+            file = request.files['screenshot']
+            if file and file.filename != '':
+                upload_folder = os.path.join('static', 'uploads')
+                os.makedirs(upload_folder, exist_ok=True)
+                filename = f"{order_id}_{file.filename}"
+                file.save(os.path.join(upload_folder, filename))
+                screenshot_filename = filename
+
+        new_order = Order(
+            order_id=order_id,
+            plan_id=plan.id,
+            course_name=plan.title,
+            amount=plan.price,
+            utr=utr,
+            screenshot=screenshot_filename,
+            status='Pending'
+        )
         db.session.add(new_order)
         db.session.commit()
         
-        # Trigger Telegram Notification
         send_telegram_notification({'order_id': order_id, 'course_name': plan.title, 'amount': plan.price, 'utr': utr})
         
         return redirect(url_for('payment_success', order_id=order_id))
@@ -324,7 +342,7 @@ INDEX_HTML = BASE_HEAD.replace('{% block content %}{% endblock %}', """
     <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
         {% for plan in plans %}
         <div class="glass rounded-2xl overflow-hidden border border-purple-900/50 hover:border-purple-500/50 transition duration-300 flex flex-col group">
-            <div class="relative h-56 bg-black/60 flex items-center justify-center p-3">
+            <div class="relative h-60 bg-black/60 flex items-center justify-center p-3">
                 <img src="{{ plan.image_url }}" alt="{{ plan.title }}" class="w-full h-full object-contain group-hover:scale-105 transition duration-500" onerror="this.src='https://images.unsplash.com/photo-1618005182384-a83a8bd57fbe?w=600'">
                 <div class="absolute top-3 right-3 bg-purple-900/90 backdrop-blur-md px-3 py-1 rounded-full text-xs font-semibold text-purple-200 border border-purple-500/30">
                     <i class="fa-solid fa-video mr-1"></i> {{ plan.videos_count }} Videos
@@ -355,53 +373,56 @@ DEMO_HTML = BASE_HEAD.replace('{% block content %}{% endblock %}', """
     <a href="/" class="inline-flex items-center gap-2 text-sm font-semibold text-purple-400 hover:text-purple-300 mb-6">
         <i class="fa-solid fa-arrow-left"></i> Back to Courses
     </a>
-    <div class="glass rounded-3xl p-6 md:p-10 border border-purple-900/50 glow-effect">
+    <div class="glass rounded-3xl p-6 md:p-10 border border-purple-900/50 glow-effect flex flex-col gap-8">
+        
         <!-- Main Thumbnail View -->
-        <div class="grid grid-cols-1 md:grid-cols-2 gap-8 items-center">
-            <div class="rounded-2xl overflow-hidden border border-purple-500/30 h-80 bg-black/80 flex items-center justify-center p-4">
-                <img src="{{ plan.image_url }}" alt="{{ plan.title }}" class="w-full h-full object-contain drop-shadow-2xl" onerror="this.src='https://images.unsplash.com/photo-1618005182384-a83a8bd57fbe?w=800'">
-            </div>
-            <div>
-                <span class="px-3 py-1 rounded-full text-xs font-bold uppercase bg-purple-900/60 text-purple-300 border border-purple-500/30">
-                    <i class="fa-solid fa-video mr-1"></i> {{ plan.videos_count }} Videos Included
-                </span>
-                <h1 class="text-2xl md:text-3xl font-black text-white mt-3">{{ plan.title }}</h1>
-                <p class="mt-3 text-purple-200/80 text-sm leading-relaxed">{{ plan.description }}</p>
-                <div class="mt-6">
-                    <span class="text-xs text-purple-300/60 block">Full Access Price</span>
-                    <span class="text-3xl font-black text-white">₹{{ plan.price }}</span>
-                </div>
+        <div class="w-full rounded-2xl overflow-hidden border border-purple-500/30 h-96 bg-black/80 flex items-center justify-center p-4">
+            <img src="{{ plan.image_url }}" alt="{{ plan.title }}" class="w-full h-full object-contain drop-shadow-2xl" onerror="this.src='https://images.unsplash.com/photo-1618005182384-a83a8bd57fbe?w=800'">
+        </div>
+
+        <div>
+            <span class="px-3 py-1 rounded-full text-xs font-bold uppercase bg-purple-900/60 text-purple-300 border border-purple-500/30">
+                <i class="fa-solid fa-video mr-1"></i> {{ plan.videos_count }} Videos Included
+            </span>
+            <h1 class="text-3xl font-black text-white mt-3">{{ plan.title }}</h1>
+            <p class="mt-3 text-purple-200/80 text-base leading-relaxed">{{ plan.description }}</p>
+            <div class="mt-6">
+                <span class="text-xs text-purple-300/60 block">Full Access Price</span>
+                <span class="text-4xl font-black text-white">₹{{ plan.price }}</span>
             </div>
         </div>
 
-        <!-- Extra Demo Images Grid (2-3 Images Preview) -->
+        <!-- Extra Demo Images Stacked Vertically (One by One) -->
         {% if extra_imgs %}
-        <div class="mt-10 pt-8 border-t border-purple-900/40">
-            <h3 class="text-lg font-bold text-purple-200 mb-4"><i class="fa-solid fa-images mr-2 text-purple-400"></i> Course Preview Screenshots</h3>
-            <div class="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-4">
-                {% for img in extra_imgs %}
-                {% if img %}
-                <div class="h-48 rounded-2xl overflow-hidden border border-purple-500/30 bg-black/60 flex items-center justify-center p-2">
-                    <img src="{{ img }}" alt="Screenshot" class="w-full h-full object-contain hover:scale-105 transition duration-300" onerror="this.style.display='none'">
-                </div>
-                {% endif %}
-                {% endfor %}
+        <div class="pt-6 border-t border-purple-900/40 flex flex-col gap-6">
+            <h3 class="text-lg font-bold text-purple-200"><i class="fa-solid fa-images mr-2 text-purple-400"></i> Course Preview Screenshots</h3>
+            {% for img in extra_imgs %}
+            {% if img %}
+            <div class="w-full h-96 rounded-2xl overflow-hidden border border-purple-500/30 bg-black/80 flex items-center justify-center p-4">
+                <img src="{{ img }}" alt="Screenshot" class="w-full h-full object-contain drop-shadow-xl" onerror="this.style.display='none'">
             </div>
+            {% endif %}
+            {% endfor %}
         </div>
         {% endif %}
 
-        <div class="mt-10 pt-8 border-t border-purple-900/40 text-center">
-            <h3 class="text-xl font-bold mb-4">Want to test the course before buying?</h3>
-            <a href="{{ plan.telegram_url }}" target="_blank" class="inline-flex items-center gap-3 px-8 py-4 rounded-2xl bg-blue-600 hover:bg-blue-500 text-white font-bold text-lg shadow-2xl glow-blue transition transform hover:scale-105">
-                <i class="fa-brands fa-telegram text-2xl"></i> WATCH DEMO ON TELEGRAM
-            </a>
+        <!-- Telegram & Buy Buttons Stacked Vertically (Upar-Neeche) -->
+        <div class="pt-8 border-t border-purple-900/40 flex flex-col gap-4 text-center">
+            <h3 class="text-xl font-bold">Want to test the course before buying?</h3>
+            <div>
+                <a href="{{ plan.telegram_url }}" target="_blank" class="inline-flex items-center justify-center gap-3 w-full md:w-auto px-8 py-4 rounded-2xl bg-blue-600 hover:bg-blue-500 text-white font-bold text-lg shadow-2xl glow-blue transition transform hover:scale-105">
+                    <i class="fa-brands fa-telegram text-2xl"></i> WATCH DEMO ON TELEGRAM
+                </a>
+            </div>
         </div>
-        <div class="mt-10 p-6 rounded-2xl bg-purple-950/40 border border-purple-500/20">
+
+        <div class="p-6 rounded-2xl bg-purple-950/40 border border-purple-500/20">
             <h4 class="font-bold text-purple-300 mb-3"><i class="fa-solid fa-circle-question mr-2"></i> How to Watch the Demo</h4>
             <div class="text-sm text-purple-200/80 whitespace-pre-line leading-relaxed">{{ plan.demo_instructions }}</div>
         </div>
-        <div class="mt-8 text-center">
-            <a href="/payment/{{ plan.id }}" class="inline-block w-full md:w-auto px-10 py-4 rounded-2xl bg-gradient-to-r from-purple-600 to-blue-600 hover:from-purple-500 hover:to-blue-500 text-white font-black text-lg shadow-xl glow-effect transition">
+
+        <div>
+            <a href="/payment/{{ plan.id }}" class="block w-full py-4 rounded-2xl bg-gradient-to-r from-purple-600 to-blue-600 hover:from-purple-500 hover:to-blue-500 text-white text-center font-black text-lg shadow-xl glow-effect transition">
                 BUY NOW — UNLOCK PREMIUM ACCESS (₹{{ plan.price }})
             </a>
         </div>
@@ -437,10 +458,14 @@ PAYMENT_HTML = BASE_HEAD.replace('{% block content %}{% endblock %}', """
         <div class="mb-8 p-4 rounded-xl bg-purple-950/40 border border-purple-500/20 text-xs text-purple-300/80 leading-relaxed whitespace-pre-line">
             {{ settings.payment_instructions }}
         </div>
-        <form action="/payment/{{ plan.id }}" method="POST" class="space-y-6">
+        <form action="/payment/{{ plan.id }}" method="POST" enctype="multipart/form-data" class="space-y-6">
             <div>
                 <label class="block text-sm font-bold text-purple-200 mb-2">Enter Your 12-Digit UTR / Transaction Reference Number *</label>
                 <input type="text" name="utr" required placeholder="e.g. 432156789012" class="w-full px-4 py-3 rounded-xl bg-purple-950/60 border border-purple-500/30 text-white focus:outline-none focus:border-purple-500 transition font-mono">
+            </div>
+            <div>
+                <label class="block text-sm font-bold text-purple-200 mb-2">Upload Payment Screenshot (JPG, PNG, WebP) *</label>
+                <input type="file" name="screenshot" accept="image/*" required class="w-full px-4 py-3 rounded-xl bg-purple-950/60 border border-purple-500/30 text-sm text-purple-300 file:mr-4 file:py-2 file:px-4 file:rounded-xl file:border-0 file:text-xs file:font-bold file:bg-purple-800 file:text-white hover:file:bg-purple-700 transition">
             </div>
             <button type="submit" class="w-full py-4 rounded-2xl bg-gradient-to-r from-purple-600 to-blue-600 hover:from-purple-500 hover:to-blue-500 text-white font-black text-lg shadow-xl glow-effect transition">
                 SUBMIT PAYMENT DETAILS
@@ -457,7 +482,7 @@ SUCCESS_HTML = BASE_HEAD.replace('{% block content %}{% endblock %}', """
             <i class="fa-solid fa-check"></i>
         </div>
         <h1 class="text-2xl font-black text-white">Payment Details Submitted!</h1>
-        <p class="text-purple-300/80 text-sm mt-2">Your submission has been securely recorded and sent to admin via Telegram.</p>
+        <p class="text-purple-300/80 text-sm mt-2">Your payment screenshot and UTR have been recorded and sent to the admin via Telegram.</p>
         <div class="my-6 p-4 rounded-2xl bg-purple-950/60 border border-purple-500/30 text-left space-y-2 text-sm">
             <div class="flex justify-between"><span class="text-purple-400">Order ID:</span> <span class="font-mono text-white">{{ order.order_id }}</span></div>
             <div class="flex justify-between"><span class="text-purple-400">Course:</span> <span class="text-white font-bold">{{ order.course_name }}</span></div>
@@ -506,9 +531,14 @@ ADMIN_DASHBOARD_HTML = BASE_HEAD.replace('{% block content %}{% endblock %}', ""
             <h1 class="text-3xl font-black text-white">Admin Dashboard</h1>
             <p class="text-purple-300/70 text-sm">Manage course plans, orders, and system settings.</p>
         </div>
-        <a href="/admin/logout" class="px-4 py-2 rounded-xl bg-red-950/80 hover:bg-red-900 text-red-200 text-sm font-semibold border border-red-500/30 transition">
-            <i class="fa-solid fa-right-from-bracket mr-1.5"></i> Logout
-        </a>
+        <div class="flex items-center gap-3">
+            <a href="/" class="px-4 py-2 rounded-xl bg-purple-900/60 hover:bg-purple-800 text-purple-200 text-sm font-semibold border border-purple-500/30 transition">
+                <i class="fa-solid fa-arrow-left mr-1.5"></i> Back to Website
+            </a>
+            <a href="/admin/logout" class="px-4 py-2 rounded-xl bg-red-950/80 hover:bg-red-900 text-red-200 text-sm font-semibold border border-red-500/30 transition">
+                <i class="fa-solid fa-right-from-bracket mr-1.5"></i> Logout
+            </a>
+        </div>
     </div>
     <div class="grid grid-cols-2 md:grid-cols-4 gap-4 mb-10">
         <div class="glass p-5 rounded-2xl border border-purple-900/50">
@@ -544,6 +574,7 @@ ADMIN_DASHBOARD_HTML = BASE_HEAD.replace('{% block content %}{% endblock %}', ""
                             <th class="p-4">Course</th>
                             <th class="p-4">Amount</th>
                             <th class="p-4">UTR Number</th>
+                            <th class="p-4">Screenshot</th>
                             <th class="p-4">Status</th>
                             <th class="p-4 text-center">Actions</th>
                         </tr>
@@ -559,6 +590,15 @@ ADMIN_DASHBOARD_HTML = BASE_HEAD.replace('{% block content %}{% endblock %}', ""
                             <td class="p-4 font-bold text-white">₹{{ order.amount }}</td>
                             <td class="p-4 font-mono text-purple-300">{{ order.utr }}</td>
                             <td class="p-4">
+                                {% if order.screenshot %}
+                                <a href="/static/uploads/{{ order.screenshot }}" target="_blank" class="text-blue-400 hover:underline text-xs flex items-center gap-1 font-semibold">
+                                    <i class="fa-solid fa-image"></i> View
+                                </a>
+                                {% else %}
+                                <span class="text-xs text-purple-400/50">None</span>
+                                {% endif %}
+                            </td>
+                            <td class="p-4">
                                 <span class="px-2.5 py-1 rounded-full text-xs font-bold {% if order.status == 'Approved' %}bg-emerald-950 text-emerald-300 border border-emerald-500/30{% elif order.status == 'Rejected' %}bg-red-950 text-red-300 border border-red-500/30{% else %}bg-amber-950 text-amber-300 border border-amber-500/30{% endif %}">{{ order.status }}</span>
                             </td>
                             <td class="p-4 text-center">
@@ -569,7 +609,7 @@ ADMIN_DASHBOARD_HTML = BASE_HEAD.replace('{% block content %}{% endblock %}', ""
                             </td>
                         </tr>
                         {% else %}
-                        <tr><td colspan="6" class="p-8 text-center text-purple-400/60">No payment orders submitted yet.</td></tr>
+                        <tr><td colspan="7" class="p-8 text-center text-purple-400/60">No payment orders submitted yet.</td></tr>
                         {% endfor %}
                     </tbody>
                 </table>
