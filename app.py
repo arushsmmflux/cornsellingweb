@@ -10,18 +10,18 @@ app.config['SECRET_KEY'] = os.environ.get('SECRET_KEY', 'nexus_secure_secret_key
 
 # Vercel Read-Only File System Fix for SQLite
 if os.environ.get('VERCEL'):
-    app.config['SQLALCHEMY_DATABASE_URI'] = 'sqlite:////tmp/nexus_courses.db'
+    app.config['SQLALCHEMY_DATABASE_URI'] = 'sqlite:////tmp/nexus_plans.db'
 else:
-    app.config['SQLALCHEMY_DATABASE_URI'] = os.environ.get('DATABASE_URL', 'sqlite:///nexus_courses.db')
+    app.config['SQLALCHEMY_DATABASE_URI'] = os.environ.get('DATABASE_URL', 'sqlite:///nexus_plans.db')
 
 app.config['SQLALCHEMY_TRACK_MODIFICATIONS'] = False
 db = SQLAlchemy(app)
 
 # ==========================================
-# 🛠️ EDITABLE CONFIGURATION (YAHAN SE CHANGE KR SAKTA HAI - PERMANENT!)
+# 🛠️ EDITABLE CONFIGURATION
 # ==========================================
 SITE_CONFIG = {
-    'site_name': 'NEXUS COURSES',
+    'site_name': 'NEXUS PLANS',
     'site_caption': 'Master High-Income Skills & Curated Masterclasses',
     'upi_id': 'nexuspayments@oksbi',
     'upi_name': 'Nexus Digital Store',
@@ -31,11 +31,11 @@ SITE_CONFIG = {
     'payment_instructions': '1. Scan QR or pay directly to the UPI ID\n2. Copy the 12-digit UTR/Ref Number\n3. Upload payment screenshot and UTR below for instant verification'
 }
 
-# 📦 ALL PLANS & CONTENT (Yahan se saare plans, prices, aur videos permanent edit kar le)
+# 📦 ALL PLANS & CONTENT (10 Plans including Plan 10 Placeholder)
 MASTER_PLANS = [
     {
         "id": 1,
-        "title": "𝗜𝗡𝗦𝗧𝗚𝗥𝗔𝗠 𝗠𝗠𝗦 𝗔𝗟𝗟 😍🔥",
+        "title": "Ultimate Masterclass Pack 1",
         "price": 49,
         "videos_count": "50000+",
         "validity": "180 days",
@@ -164,19 +164,6 @@ MASTER_PLANS = [
             "https://videotourl.com/videos/1791611779829-f05b75a9-65c7-441d-ad89-5d5f15301b01.mp4"
         ]
     },
-     {
-        "id": 8,
-        "title": "Elite Video Library 8",
-        "price": 49,
-        "videos_count": "18000+",
-        "validity": "180 days",
-        "image_url": "https://i.ibb.co/C5KZBm7f/course8.jpg",
-        "description": "1. 𝙔𝙊𝙐 𝘾𝘼𝙉 𝙎𝘼𝙑𝙀 𝙄𝙉 𝙂𝘼𝙇𝙇𝙀𝙍𝙔 ✅\n2. 𝙉𝙊 𝘼𝙉𝙔 𝘼𝘿𝙎 ❌\n3. 𝙃𝙄𝙂𝙃 𝙌𝙐𝘼𝙇𝙄𝙏𝙔 𝙑𝙄𝘿𝙀𝙊𝙎 😍",
-        "demo_videos": [
-            "https://videotourl.com/videos/1791611713436-2f106a4b-9ee1-4d9b-8e06-c30a0fe309e7.mp4",
-            "https://videotourl.com/videos/1791611779829-f05b75a9-65c7-441d-ad89-5d5f15301b01.mp4"
-        ]
-    },
     {
         "id": 9,
         "title": "Super Viral Pack 9",
@@ -189,11 +176,23 @@ MASTER_PLANS = [
             "https://videotourl.com/videos/1791611593469-187437c5-8f84-41c6-afa1-3d61feb9ff72.mp4",
             "https://videotourl.com/videos/1791611552865-c2cf6f7d-1544-4c34-9bdb-5e5fb2092584.mp4"
         ]
+    },
+    {
+        "id": 10,
+        "title": "Plan 10 Placeholder",
+        "price": 99,
+        "videos_count": "10000+",
+        "validity": "180 days",
+        "image_url": "https://i.ibb.co/5X0hc5dd/logo.png",
+        "description": "1. 𝙔𝙊𝙐 𝘾𝘼𝙉 𝙎𝘼𝙑𝙀 𝙄𝙉 𝙂𝘼𝙇𝙇𝙀𝙍𝙔 ✅\n2. 𝙉𝙊 𝘼𝙉𝙔 𝘼𝘿𝙎 ❌\n3. 𝙃𝙄𝙂𝙃 𝙌𝙐𝘼𝙇𝙄𝙏𝙔 𝙑𝙄𝘿𝙀𝙊𝙎 😍",
+        "demo_videos": [
+            "https://www.w3schools.com/html/mov_bbb.mp4"
+        ]
     }
 ]
 # ==========================================
 
-# --- DATABASE MODELS (For Orders & Admin Auth) ---
+# --- DATABASE MODELS ---
 class Admin(db.Model):
     id = db.Column(db.Integer, primary_key=True)
     username = db.Column(db.String(80), unique=True, nullable=False)
@@ -202,7 +201,7 @@ class Admin(db.Model):
 class Order(db.Model):
     id = db.Column(db.Integer, primary_key=True)
     order_id = db.Column(db.String(50), unique=True, nullable=False)
-    course_name = db.Column(db.String(200), nullable=False)
+    plan_name = db.Column(db.String(200), nullable=False)
     amount = db.Column(db.Integer, nullable=False)
     utr = db.Column(db.String(50), nullable=False)
     screenshot = db.Column(db.String(500), nullable=True)
@@ -229,7 +228,7 @@ def send_telegram_notification(order_info):
         message = (
             f"🚨 *New Payment Submission!* 🚨\n\n"
             f"🆔 *Order ID:* `{order_info['order_id']}`\n"
-            f"📚 *Course:* {order_info['course_name']}\n"
+            f"📚 *Plan:* {order_info['plan_name']}\n"
             f"💰 *Amount:* ₹{order_info['amount']}\n"
             f"🔢 *UTR Number:* `{order_info['utr']}`\n"
             f"⏳ *Status:* Pending Verification"
@@ -247,7 +246,6 @@ def index():
         analytics.total_visits += 1
         db.session.commit()
     
-    # Calculate original price as 1.80x and round it
     processed_plans = []
     for p in MASTER_PLANS:
         p_copy = p.copy()
@@ -256,8 +254,8 @@ def index():
         
     return render_template_string(INDEX_HTML, config=SITE_CONFIG, plans=processed_plans)
 
-@app.route('/demo/<int:plan_id>')
-def demo_page(plan_id):
+@app.route('/plan/<int:plan_id>')
+def plan_page(plan_id):
     plan = next((p for p in MASTER_PLANS if p['id'] == plan_id), None)
     if not plan:
         return redirect(url_for('index'))
@@ -291,7 +289,7 @@ def payment_page(plan_id):
 
         new_order = Order(
             order_id=order_id,
-            course_name=plan['title'],
+            plan_name=plan['title'],
             amount=plan['price'],
             utr=utr,
             screenshot=screenshot_filename,
@@ -300,7 +298,7 @@ def payment_page(plan_id):
         db.session.add(new_order)
         db.session.commit()
         
-        send_telegram_notification({'order_id': order_id, 'course_name': plan['title'], 'amount': plan['price'], 'utr': utr})
+        send_telegram_notification({'order_id': order_id, 'plan_name': plan['title'], 'amount': plan['price'], 'utr': utr})
         return redirect(url_for('payment_success', order_id=order_id))
     
     return render_template_string(PAYMENT_HTML, config=SITE_CONFIG, plan=plan)
@@ -358,30 +356,44 @@ def admin_order_status(order_id, status):
         db.session.commit()
     return redirect(url_for('admin_dashboard'))
 
-# --- HTML TEMPLATES (Amazon / Flipkart Style UI with Neon Borders & Shine) ---
+# --- HTML TEMPLATES ---
 BASE_HEAD = """
 <!DOCTYPE html>
 <html lang="en" class="dark">
 <head>
     <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
     <title>{{ config.site_name }}</title>
     <script src="https://cdn.tailwindcss.com"></script>
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
     <style>
-        body { background-color: #070112; color: #f3f4f6; font-family: system-ui, -apple-system, sans-serif; overflow-x: hidden; }
+        body { background-color: #070112; color: #f3f4f6; font-family: system-ui, -apple-system, sans-serif; overflow-x: hidden; touch-action: manipulation; }
         .glass-card { background: rgba(19, 5, 42, 0.85); backdrop-filter: blur(16px); border: 1px solid rgba(168, 85, 247, 0.25); box-shadow: 0 8px 32px 0 rgba(0, 0, 0, 0.37); }
         
-        @keyframes shine {
-            0% { transform: translateX(-100%); }
-            20% { transform: translateX(100%); }
-            100% { transform: translateX(100%); }
+        @keyframes continuousShine {
+            0% { transform: translateX(-150%) rotate(25deg); }
+            100% { transform: translateX(250%) rotate(25deg); }
         }
-        .shiny-btn { background: linear-gradient(135deg, #9333ea 0%, #4f46e5 100%); position: relative; overflow: hidden; transition: all 0.3s ease; }
-        .shiny-btn::after { content: ''; position: absolute; top: 0; left: -100%; width: 100%; height: 100%; background: linear-gradient(90deg, transparent, rgba(255,255,255,0.45), transparent); animation: shine 3s infinite; }
-        
-        .shiny-red-btn { background: linear-gradient(135deg, #dc2626 0%, #b91c1c 100%); position: relative; overflow: hidden; transition: all 0.3s ease; }
-        .shiny-red-btn::after { content: ''; position: absolute; top: 0; left: -100%; width: 100%; height: 100%; background: linear-gradient(90deg, transparent, rgba(255,255,255,0.45), transparent); animation: shine 3s infinite; }
+        .shiny-btn, .shiny-red-btn { position: relative; overflow: hidden; }
+        .shiny-btn::after, .shiny-red-btn::after {
+            content: '';
+            position: absolute;
+            top: -50%;
+            left: -50%;
+            width: 50%;
+            height: 200%;
+            background: linear-gradient(90deg, transparent, rgba(255,255,255,0.35), transparent);
+            animation: continuousShine 3.5s cubic-bezier(0.4, 0, 0.2, 1) infinite;
+        }
+        .shiny-btn { background: linear-gradient(135deg, #9333ea 0%, #4f46e5 100%); }
+        .shiny-red-btn { background: linear-gradient(135deg, #dc2626 0%, #b91c1c 100%); }
+
+        @keyframes subtleShake {
+            0%, 100% { transform: translateX(0); }
+            20%, 60% { transform: translateX(-3px); }
+            40%, 80% { transform: translateX(3px); }
+        }
+        .animate-shake { animation: subtleShake 2s ease-in-out infinite; }
     </style>
 </head>
 <body class="min-h-screen flex flex-col antialiased selection:bg-purple-500 selection:text-white">
@@ -427,7 +439,7 @@ INDEX_HTML = BASE_HEAD.replace('{% block content %}{% endblock %}', """
         <div class="glass-card rounded-3xl overflow-hidden border border-purple-500/30 hover:border-purple-400 transition duration-300 flex flex-col group shadow-2xl">
             <!-- Image Frame with 70% OFF Badge -->
             <div class="relative w-full h-56 sm:h-60 bg-black/90 flex items-center justify-center p-3 overflow-hidden border-b border-purple-950">
-                <img src="{{ plan.image_url }}" alt="{{ plan.title }}" class="w-full h-full object-contain group-hover:scale-105 transition duration-500 drop-shadow-md" onerror="this.src='https://images.unsplash.com/photo-1618005182384-a83a8bd57fbe?w=600'">
+                <img src="{{ plan.image_url }}" alt="{{ plan.title }}" loading="lazy" class="w-full h-full object-contain group-hover:scale-105 transition duration-500 drop-shadow-md" onerror="this.src='https://images.unsplash.com/photo-1618005182384-a83a8bd57fbe?w=600'">
                 
                 <div class="absolute top-3 left-3 bg-gradient-to-r from-amber-500 to-orange-600 text-white text-[10px] font-black uppercase px-2.5 py-1 rounded-lg shadow-lg tracking-wider flex items-center gap-1 border border-amber-400/40">
                     <i class="fa-solid fa-tag"></i> 70% OFF
@@ -465,7 +477,7 @@ INDEX_HTML = BASE_HEAD.replace('{% block content %}{% endblock %}', """
 
                 <!-- Stacked Buttons with Shining Animation -->
                 <div class="flex flex-col gap-2.5 mt-auto">
-                    <a href="/demo/{{ plan.id }}" class="w-full py-3.5 rounded-xl shiny-red-btn text-white text-center text-xs sm:text-sm font-bold shadow-lg flex items-center justify-center gap-2 tracking-wide border border-red-500/40">
+                    <a href="/plan/{{ plan.id }}" class="w-full py-3.5 rounded-xl shiny-red-btn text-white text-center text-xs sm:text-sm font-bold shadow-lg flex items-center justify-center gap-2 tracking-wide border border-red-500/40">
                         <i class="fa-solid fa-circle-play text-sm"></i> VIEW DEMO & DETAILS
                     </a>
                     <a href="/payment/{{ plan.id }}" class="w-full py-3.5 rounded-xl shiny-btn text-white text-center text-xs sm:text-sm font-black shadow-lg flex items-center justify-center gap-2 tracking-wide border border-purple-400/40">
@@ -477,18 +489,76 @@ INDEX_HTML = BASE_HEAD.replace('{% block content %}{% endblock %}', """
         {% endfor %}
     </div>
 </section>
+
+<!-- Time-Based Offer Popup (3 Minutes Trigger) -->
+<div id="offer-popup" class="fixed inset-0 z-50 hidden bg-black/80 backdrop-blur-md flex items-center justify-center p-4">
+    <div id="offer-card" class="glass-card max-w-md w-full rounded-3xl p-6 sm:p-8 border border-purple-500/50 shadow-2xl relative text-center space-y-4 animate-shake">
+        <button onclick="closeOfferPopup()" class="absolute top-4 right-4 text-purple-400 hover:text-white text-xl"><i class="fa-solid fa-xmark"></i></button>
+        <span class="px-3 py-1 rounded-full text-xs font-black uppercase bg-amber-500/20 text-amber-300 border border-amber-500/40">
+            <i class="fa-solid fa-bolt mr-1"></i> Featured Recommendation
+        </span>
+        <div id="popup-img-container" class="w-full h-40 bg-black/90 rounded-2xl flex items-center justify-center p-2 border border-purple-500/30">
+            <img id="popup-img" src="" alt="Plan" class="w-full h-full object-contain">
+        </div>
+        <h3 id="popup-title" class="text-xl font-black text-white"></h3>
+        <p class="text-xs text-purple-200/80">Take advantage of our curated masterclass pack today with complete lifetime benefits and verified resources.</p>
+        <div class="flex items-center justify-center gap-3">
+            <span id="popup-price" class="text-2xl font-black text-white"></span>
+            <span id="popup-orig-price" class="text-sm text-purple-400 line-through"></span>
+        </div>
+        <a id="popup-buy-btn" href="" class="w-full py-3.5 rounded-xl shiny-btn text-white text-center font-black text-sm shadow-xl flex items-center justify-center gap-2 border border-purple-400/40 block">
+            BUY NOW — UNLOCK ACCESS
+        </a>
+    </div>
+</div>
+
+<script>
+const plansData = {{ plans | tojson | safe }};
+let popupShown = false;
+
+function checkPopupTimer() {
+    if (popupShown) return;
+    const startTime = localStorage.getItem('nexus_visit_time');
+    if (!startTime) {
+        localStorage.setItem('nexus_visit_time', Date.now().toString());
+        return;
+    }
+    const elapsed = Date.now() - parseInt(startTime);
+    if (elapsed >= 180000) { // 3 Minutes
+        triggerOfferPopup();
+    }
+}
+
+function triggerOfferPopup() {
+    if (popupShown) return;
+    popupShown = true;
+    const randomPlan = plansData[Math.floor(Math.random() * plansData.length)];
+    document.getElementById('popup-img').src = randomPlan.image_url;
+    document.getElementById('popup-title').innerText = randomPlan.title;
+    document.getElementById('popup-price').innerText = '₹' + randomPlan.price;
+    document.getElementById('popup-orig-price').innerText = '₹' + randomPlan.original_price;
+    document.getElementById('popup-buy-btn').href = '/payment/' + randomPlan.id;
+    document.getElementById('offer-popup').classList.remove('hidden');
+}
+
+function closeOfferPopup() {
+    document.getElementById('offer-popup').classList.add('hidden');
+}
+
+setInterval(checkPopupTimer, 10000);
+</script>
 """)
 
 DEMO_HTML = BASE_HEAD.replace('{% block content %}{% endblock %}', """
 <div class="max-w-4xl mx-auto px-4 py-8 sm:py-12">
     <a href="/" class="inline-flex items-center gap-2 text-xs sm:text-sm font-semibold text-purple-400 hover:text-purple-300 mb-6 transition">
-        <i class="fa-solid fa-arrow-left"></i> Back to Courses
+        <i class="fa-solid fa-arrow-left"></i> Back to Plans
     </a>
     <div class="glass-card rounded-3xl p-5 sm:p-8 md:p-10 border border-purple-500/40 flex flex-col gap-8 shadow-2xl">
         
         <!-- Main Thumbnail Frame -->
         <div class="w-full rounded-2xl overflow-hidden border border-purple-500/40 h-72 sm:h-96 bg-black/90 flex items-center justify-center p-3 relative">
-            <img src="{{ plan.image_url }}" alt="{{ plan.title }}" class="w-full h-full object-contain drop-shadow-2xl" onerror="this.src='https://images.unsplash.com/photo-1618005182384-a83a8bd57fbe?w=800'">
+            <img src="{{ plan.image_url }}" alt="{{ plan.title }}" loading="lazy" class="w-full h-full object-contain drop-shadow-2xl" onerror="this.src='https://images.unsplash.com/photo-1618005182384-a83a8bd57fbe?w=800'">
             <div class="absolute top-4 left-4 bg-gradient-to-r from-amber-500 to-orange-600 text-white text-xs font-black uppercase px-3 py-1.5 rounded-xl shadow-lg border border-amber-400/40">
                 <i class="fa-solid fa-tag mr-1"></i> 70% OFF Deal
             </div>
@@ -507,7 +577,7 @@ DEMO_HTML = BASE_HEAD.replace('{% block content %}{% endblock %}', """
             <div class="grid grid-cols-1 sm:grid-cols-3 gap-3 pt-4 border-t border-purple-900/50 text-xs sm:text-sm">
                 <div class="flex flex-col bg-purple-950/50 p-3 rounded-xl border border-purple-900/40">
                     <span class="text-purple-400 text-[10px] font-bold uppercase tracking-wider">Total Videos</span>
-                    <span class="text-white font-bold mt-0.5">{{ plan.videos_count }} HD Lessons</span>
+                    <span class="text-white font-bold mt-0.5">{{ plan.videos_count }}</span>
                 </div>
                 <div class="flex flex-col bg-purple-950/50 p-3 rounded-xl border border-purple-900/40">
                     <span class="text-purple-400 text-[10px] font-bold uppercase tracking-wider">Validity</span>
@@ -537,7 +607,7 @@ DEMO_HTML = BASE_HEAD.replace('{% block content %}{% endblock %}', """
         {% if plan.demo_videos %}
         <div class="pt-4 border-t border-purple-900/40 flex flex-col gap-6">
             <h3 class="text-lg sm:text-xl font-bold text-white flex items-center gap-2">
-                <i class="fa-solid fa-play-circle text-red-500"></i> Course Preview & Demo Videos
+                <i class="fa-solid fa-play-circle text-red-500"></i> Plan Preview & Demo Videos
             </h3>
             {% for v_url in plan.demo_videos %}
             {% if v_url %}
@@ -570,8 +640,8 @@ DEMO_HTML = BASE_HEAD.replace('{% block content %}{% endblock %}', """
 
 PAYMENT_HTML = BASE_HEAD.replace('{% block content %}{% endblock %}', """
 <div class="max-w-xl mx-auto px-4 py-8 sm:py-12">
-    <a href="/demo/{{ plan.id }}" class="inline-flex items-center gap-2 text-xs sm:text-sm font-semibold text-purple-400 hover:text-purple-300 mb-6">
-        <i class="fa-solid fa-arrow-left"></i> Back to Course
+    <a href="/plan/{{ plan.id }}" class="inline-flex items-center gap-2 text-xs sm:text-sm font-semibold text-purple-400 hover:text-purple-300 mb-6">
+        <i class="fa-solid fa-arrow-left"></i> Back to Plan
     </a>
     <div class="glass-card rounded-3xl p-5 sm:p-8 border border-purple-500/40 relative shadow-2xl">
         <div class="text-center pb-6 border-b border-purple-900/40">
@@ -584,8 +654,8 @@ PAYMENT_HTML = BASE_HEAD.replace('{% block content %}{% endblock %}', """
 
         <div class="my-6 text-center bg-purple-950/60 p-5 rounded-2xl border border-purple-500/30">
             <p class="text-xs font-semibold text-purple-300 mb-3">Scan QR code using GPay, PhonePe, or Paytm</p>
-            <div class="inline-block bg-white p-3 rounded-2xl shadow-xl">
-                <img src="https://api.qrserver.com/v1/create-qr-code/?size=180x180&data=upi://pay?pa={{ config.upi_id }}&pn={{ config.upi_name }}&am={{ plan.price }}&cu=INR" alt="UPI QR Code" class="w-40 h-40 sm:w-48 sm:h-48 mx-auto rounded-xl">
+            <div class="inline-block bg-white p-4 rounded-2xl shadow-xl">
+                <img src="https://api.qrserver.com/v1/create-qr-code/?size=300x300&data=upi://pay?pa={{ config.upi_id }}&pn={{ config.upi_name }}&am={{ plan.price }}&cu=INR" alt="UPI QR Code" loading="eager" class="w-48 h-48 sm:w-56 sm:h-56 mx-auto rounded-xl block" style="image-rendering: crisp-edges;">
             </div>
             <div class="mt-3 flex items-center justify-center gap-2">
                 <span class="text-xs sm:text-sm font-mono text-purple-200 bg-purple-900/60 px-3 py-2 rounded-xl border border-purple-500/30 truncate max-w-[220px]">{{ config.upi_id }}</span>
@@ -642,7 +712,7 @@ SUCCESS_HTML = BASE_HEAD.replace('{% block content %}{% endblock %}', """
         
         <div class="my-6 p-5 rounded-2xl bg-purple-950/60 border border-purple-500/30 text-left space-y-3 text-xs sm:text-sm">
             <div class="flex justify-between border-b border-purple-900/40 pb-2"><span class="text-purple-400 font-semibold">Order ID:</span> <span class="font-mono text-white font-bold">{{ order.order_id }}</span></div>
-            <div class="flex justify-between border-b border-purple-900/40 pb-2"><span class="text-purple-400 font-semibold">Course / Plan:</span> <span class="text-white font-bold">{{ order.course_name }}</span></div>
+            <div class="flex justify-between border-b border-purple-900/40 pb-2"><span class="text-purple-400 font-semibold">Plan Name:</span> <span class="text-white font-bold">{{ order.plan_name }}</span></div>
             <div class="flex justify-between border-b border-purple-900/40 pb-2"><span class="text-purple-400 font-semibold">Amount Paid:</span> <span class="text-white font-bold">₹{{ order.amount }}</span></div>
             <div class="flex justify-between border-b border-purple-900/40 pb-2"><span class="text-purple-400 font-semibold">UTR Number:</span> <span class="font-mono text-white">{{ order.utr }}</span></div>
             <div class="flex justify-between"><span class="text-purple-400 font-semibold">Status:</span> <span class="px-3 py-1 rounded-full text-xs font-bold bg-amber-950 text-amber-300 border border-amber-500/30">{{ order.status }}</span></div>
@@ -724,7 +794,7 @@ ADMIN_DASHBOARD_HTML = BASE_HEAD.replace('{% block content %}{% endblock %}', ""
                 <thead>
                     <tr class="bg-purple-950/60 text-purple-300 text-[10px] sm:text-xs uppercase border-b border-purple-900/50">
                         <th class="p-3 sm:p-4">Order ID / Date</th>
-                        <th class="p-3 sm:p-4">Course</th>
+                        <th class="p-3 sm:p-4">Plan</th>
                         <th class="p-3 sm:p-4">Amount</th>
                         <th class="p-3 sm:p-4">UTR Number</th>
                         <th class="p-3 sm:p-4">Screenshot</th>
@@ -739,7 +809,7 @@ ADMIN_DASHBOARD_HTML = BASE_HEAD.replace('{% block content %}{% endblock %}', ""
                             <span class="font-mono font-bold text-white block">{{ order.order_id }}</span>
                             <span class="text-[10px] text-purple-400">{{ order.created_at.strftime('%Y-%m-%d %H:%M') }}</span>
                         </td>
-                        <td class="p-3 sm:p-4 font-semibold text-purple-200">{{ order.course_name }}</td>
+                        <td class="p-3 sm:p-4 font-semibold text-purple-200">{{ order.plan_name }}</td>
                         <td class="p-3 sm:p-4 font-bold text-white">₹{{ order.amount }}</td>
                         <td class="p-3 sm:p-4 font-mono text-purple-300">{{ order.utr }}</td>
                         <td class="p-3 sm:p-4">
