@@ -6,7 +6,7 @@ from flask import Flask, render_template_string, request, redirect, url_for, ses
 from flask_sqlalchemy import SQLAlchemy
 from werkzeug.security import generate_password_hash, check_password_hash
 
-app = Flask(__name__)
+app = Flask(__name__, instance_path="/tmp/instance")
 app.config['SECRET_KEY'] = os.environ.get('SECRET_KEY', 'nexus_secure_secret_key_2026')
 app.config['SQLALCHEMY_DATABASE_URI'] = os.environ.get('DATABASE_URL', 'sqlite:///nexus_courses.db')
 app.config['SQLALCHEMY_TRACK_MODIFICATIONS'] = False
