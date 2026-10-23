@@ -35,6 +35,7 @@ class Plan(db.Model):
     title = db.Column(db.String(200), nullable=False)
     description = db.Column(db.Text, nullable=False)
     price = db.Column(db.Integer, nullable=False, default=199)
+    original_price = db.Column(db.Integer, nullable=False, default=999)
     videos_count = db.Column(db.Integer, nullable=False, default=25)
     validity = db.Column(db.String(100), nullable=False, default="Lifetime Access")
     image_url = db.Column(db.String(500), nullable=False)
@@ -85,19 +86,19 @@ with app.app_context():
             
     if Plan.query.count() == 0:
         initial_plans = [
-            ("Python Mastery & Backend Pro", "Build robust backend applications, APIs, and automated systems with Python.", 199, 30, "Lifetime Access", "https://i.ibb.co/Fb6S1mYg/course1.jpg", "https://www.w3schools.com/html/mov_bbb.mp4,https://www.w3schools.com/html/mov_bbb.mp4"),
-            ("Full Stack Web Development Bootcamp", "Master HTML, CSS, JavaScript, React, and Node.js from scratch.", 299, 45, "Lifetime Access", "https://i.ibb.co/ZRqKVvRQ/course2.jpg", "https://www.w3schools.com/html/mov_bbb.mp4"),
-            ("Advanced React & Next.js Masterclass", "Build lightning-fast, SEO-optimized web applications with modern React.", 249, 28, "Lifetime Access", "https://i.ibb.co/21H7BGM2/course3.jpg", ""),
-            ("Data Science & Machine Learning Pro", "Analyze complex datasets and build predictive AI models using Python.", 399, 50, "Lifetime Access", "https://i.ibb.co/QF2v05qK/course4.jpg", ""),
-            ("Cybersecurity & Ethical Hacking 2026", "Learn penetration testing, network security, and vulnerability assessment.", 349, 35, "Lifetime Access", "https://i.ibb.co/5X0hc5dd/course5.jpg", ""),
-            ("UI/UX Design Master Course", "Design stunning user interfaces and seamless experiences in Figma.", 199, 22, "Lifetime Access", "https://i.ibb.co/HLw36KQ4/course6.jpg", ""),
-            ("Android & iOS App Development", "Create cross-platform mobile applications using Flutter and React Native.", 299, 40, "Lifetime Access", "https://i.ibb.co/9kKCd6ZF/course7.jpg", ""),
-            ("Cloud Computing & AWS DevOps", "Master cloud infrastructure, Docker, Kubernetes, and CI/CD pipelines.", 449, 38, "Lifetime Access", "https://i.ibb.co/C5KZBm7f/course8.jpg", ""),
-            ("AI & Generative Prompt Engineering", "Leverage LLMs, AI agents, and prompt frameworks to supercharge productivity.", 199, 20, "Lifetime Access", "https://i.ibb.co/qFhKnzcH/course9.jpg", ""),
-            ("Digital Marketing & Growth Hacking", "Scale brands, run high-converting ad campaigns, and master SEO.", 199, 25, "Lifetime Access", "https://i.ibb.co/84598K8j/course10.jpg", "")
+            ("Python Mastery & Backend Pro", "Build robust backend applications, APIs, and automated systems with Python.", 199, 999, 30, "Lifetime Access", "https://i.ibb.co/Fb6S1mYg/course1.jpg", "https://www.w3schools.com/html/mov_bbb.mp4,https://www.w3schools.com/html/mov_bbb.mp4"),
+            ("Full Stack Web Development Bootcamp", "Master HTML, CSS, JavaScript, React, and Node.js from scratch.", 299, 1499, 45, "Lifetime Access", "https://i.ibb.co/ZRqKVvRQ/course2.jpg", "https://www.w3schools.com/html/mov_bbb.mp4"),
+            ("Advanced React & Next.js Masterclass", "Build lightning-fast, SEO-optimized web applications with modern React.", 249, 1299, 28, "Lifetime Access", "https://i.ibb.co/21H7BGM2/course3.jpg", ""),
+            ("Data Science & Machine Learning Pro", "Analyze complex datasets and build predictive AI models using Python.", 399, 1999, 50, "Lifetime Access", "https://i.ibb.co/QF2v05qK/course4.jpg", ""),
+            ("Cybersecurity & Ethical Hacking 2026", "Learn penetration testing, network security, and vulnerability assessment.", 349, 1599, 35, "Lifetime Access", "https://i.ibb.co/5X0hc5dd/course5.jpg", ""),
+            ("UI/UX Design Master Course", "Design stunning user interfaces and seamless experiences in Figma.", 199, 999, 22, "Lifetime Access", "https://i.ibb.co/HLw36KQ4/course6.jpg", ""),
+            ("Android & iOS App Development", "Create cross-platform mobile applications using Flutter and React Native.", 299, 1499, 40, "Lifetime Access", "https://i.ibb.co/9kKCd6ZF/course7.jpg", ""),
+            ("Cloud Computing & AWS DevOps", "Master cloud infrastructure, Docker, Kubernetes, and CI/CD pipelines.", 449, 1999, 38, "Lifetime Access", "https://i.ibb.co/C5KZBm7f/course8.jpg", ""),
+            ("AI & Generative Prompt Engineering", "Leverage LLMs, AI agents, and prompt frameworks to supercharge productivity.", 199, 999, 20, "Lifetime Access", "https://i.ibb.co/qFhKnzcH/course9.jpg", ""),
+            ("Digital Marketing & Growth Hacking", "Scale brands, run high-converting ad campaigns, and master SEO.", 199, 999, 25, "Lifetime Access", "https://i.ibb.co/84598K8j/course10.jpg", "")
         ]
-        for idx, (title, desc, price, vids, val, img, demo_vids) in enumerate(initial_plans):
-            p = Plan(title=title, description=desc, price=price, videos_count=vids, validity=val, image_url=img, demo_video_urls=demo_vids, order_index=idx)
+        for idx, (title, desc, price, orig_price, vids, val, img, demo_vids) in enumerate(initial_plans):
+            p = Plan(title=title, description=desc, price=price, original_price=orig_price, videos_count=vids, validity=val, image_url=img, demo_video_urls=demo_vids, order_index=idx)
             db.session.add(p)
             
     if not Analytics.query.first():
@@ -232,6 +233,7 @@ def admin_save_plan():
     title = request.form.get('title')
     description = request.form.get('description')
     price = int(request.form.get('price', 199))
+    original_price = int(request.form.get('original_price', 999))
     videos_count = int(request.form.get('videos_count', 25))
     validity = request.form.get('validity', 'Lifetime Access')
     image_url = request.form.get('image_url')
@@ -244,6 +246,7 @@ def admin_save_plan():
         plan.title = title
         plan.description = description
         plan.price = price
+        plan.original_price = original_price
         plan.videos_count = videos_count
         plan.validity = validity
         plan.image_url = image_url
@@ -253,7 +256,7 @@ def admin_save_plan():
     else:
         max_order = db.session.query(db.func.max(Plan.order_index)).scalar() or 0
         new_plan = Plan(
-            title=title, description=description, price=price, videos_count=videos_count, validity=validity,
+            title=title, description=description, price=price, original_price=original_price, videos_count=videos_count, validity=validity,
             image_url=image_url, demo_video_urls=demo_video_urls, demo_instructions=demo_instructions,
             enabled=enabled, order_index=max_order + 1
         )
@@ -321,28 +324,35 @@ BASE_HEAD = """
     <script src="https://cdn.tailwindcss.com"></script>
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
     <style>
-        body { background-color: #0a0118; color: #f3f4f6; font-family: system-ui, sans-serif; }
-        .glass { background: rgba(19, 5, 40, 0.7); backdrop-filter: blur(12px); border: 1px solid rgba(147, 51, 234, 0.2); }
-        .glow-effect { box-shadow: 0 0 25px rgba(147, 51, 234, 0.25); }
-        .glow-blue { box-shadow: 0 0 25px rgba(59, 130, 246, 0.25); }
+        body { background-color: #06010f; color: #f3f4f6; font-family: system-ui, -apple-system, sans-serif; overflow-x: hidden; }
+        .glass { background: rgba(18, 5, 38, 0.75); backdrop-filter: blur(16px); border: 1px solid rgba(168, 85, 247, 0.18); }
+        .glass-card { background: rgba(24, 8, 52, 0.65); backdrop-filter: blur(12px); border: 1px solid rgba(168, 85, 247, 0.15); }
+        .glow-effect { box-shadow: 0 0 30px rgba(168, 85, 247, 0.22); }
+        .glow-blue { box-shadow: 0 0 30px rgba(59, 130, 246, 0.22); }
+        .shiny-btn { background: linear-gradient(135deg, #9333ea 0%, #4f46e5 100%); position: relative; overflow: hidden; transition: all 0.3s ease; }
+        .shiny-btn::after { content: ''; position: absolute; top: -50%; left: -50%; width: 200%; height: 200%; background: linear-gradient(60deg, transparent, rgba(255,255,255,0.15), transparent); transform: rotate(30deg) translateX(-100%); transition: transform 0.7s ease-in-out; }
+        .shiny-btn:hover::after { transform: rotate(30deg) translateX(100%); }
+        .shiny-red-btn { background: linear-gradient(135deg, #dc2626 0%, #b91c1c 100%); position: relative; overflow: hidden; transition: all 0.3s ease; }
+        .shiny-red-btn::after { content: ''; position: absolute; top: -50%; left: -50%; width: 200%; height: 200%; background: linear-gradient(60deg, transparent, rgba(255,255,255,0.18), transparent); transform: rotate(30deg) translateX(-100%); transition: transform 0.7s ease-in-out; }
+        .shiny-red-btn:hover::after { transform: rotate(30deg) translateX(100%); }
     </style>
 </head>
-<body class="min-h-screen flex flex-col">
+<body class="min-h-screen flex flex-col antialiased selection:bg-purple-500 selection:text-white">
     <header class="glass sticky top-0 z-50 border-b border-purple-900/40">
-        <div class="max-w-7xl mx-auto px-4 py-3 flex items-center justify-between">
-            <a href="/" class="flex items-center gap-3">
-                <span class="text-xl font-extrabold bg-gradient-to-r from-purple-400 to-blue-400 bg-clip-text text-transparent">{{ settings.site_name }}</span>
+        <div class="max-w-7xl mx-auto px-4 py-3.5 flex items-center justify-between">
+            <a href="/" class="flex items-center gap-2.5">
+                <span class="text-xl md:text-2xl font-black bg-gradient-to-r from-purple-400 via-indigo-300 to-blue-400 bg-clip-text text-transparent tracking-tight">{{ settings.site_name }}</span>
             </a>
-            <a href="/admin/login" class="px-4 py-2 text-sm font-bold rounded-xl bg-purple-600 hover:bg-purple-500 text-white shadow-lg glow-effect transition">
-                <i class="fa-solid fa-lock mr-1.5"></i> Admin Panel
+            <a href="/admin/login" class="px-4 py-2 text-xs md:text-sm font-bold rounded-xl bg-purple-600/80 hover:bg-purple-600 text-white shadow-lg glow-effect transition flex items-center gap-1.5">
+                <i class="fa-solid fa-lock text-xs"></i> Admin
             </a>
         </div>
     </header>
     <main class="flex-grow">{% block content %}{% endblock %}</main>
-    <a href="{{ settings.telegram_support }}" target="_blank" class="fixed bottom-6 right-6 z-50 bg-blue-600 hover:bg-blue-500 text-white w-14 h-14 rounded-full flex items-center justify-center text-2xl shadow-2xl glow-blue transition transform hover:scale-110">
+    <a href="{{ settings.telegram_support }}" target="_blank" class="fixed bottom-5 right-5 z-50 bg-blue-600 hover:bg-blue-500 text-white w-12 h-12 md:w-14 md:h-14 rounded-full flex items-center justify-center text-xl md:text-2xl shadow-2xl glow-blue transition transform hover:scale-110">
         <i class="fa-brands fa-telegram"></i>
     </a>
-    <footer class="glass border-t border-purple-900/40 py-8 mt-16 text-center text-sm text-purple-300/60">
+    <footer class="glass border-t border-purple-900/40 py-8 mt-16 text-center text-xs md:text-sm text-purple-300/60">
         <p>&copy; 2026 {{ settings.site_name }}. All rights reserved.</p>
     </footer>
 </body>
@@ -350,38 +360,64 @@ BASE_HEAD = """
 """
 
 INDEX_HTML = BASE_HEAD.replace('{% block content %}{% endblock %}', """
-<section class="py-16 px-4 text-center">
-    <div class="max-w-4xl mx-auto">
-        <span class="px-4 py-1.5 rounded-full text-xs font-bold uppercase tracking-wider bg-purple-900/60 text-purple-300 border border-purple-500/30">🚀 Premium Learning Platform</span>
-        <h1 class="text-4xl md:text-6xl font-black mt-6 tracking-tight bg-gradient-to-r from-white via-purple-200 to-blue-300 bg-clip-text text-transparent">{{ settings.site_name }}</h1>
-        <p class="mt-4 text-lg md:text-xl text-purple-200/70 max-w-2xl mx-auto">{{ settings.site_caption }}</p>
+<section class="py-12 md:py-16 px-4 text-center">
+    <div class="max-w-4xl mx-auto space-y-4">
+        <span class="inline-flex items-center gap-1.5 px-4 py-1.5 rounded-full text-xs font-bold uppercase tracking-wider bg-purple-950 text-purple-300 border border-purple-500/30 shadow-inner">
+            <i class="fa-solid fa-bolt text-amber-400"></i> Premium Learning Platform
+        </span>
+        <h1 class="text-3xl sm:text-4xl md:text-6xl font-black tracking-tight bg-gradient-to-r from-white via-purple-200 to-blue-300 bg-clip-text text-transparent px-2">
+            {{ settings.site_name }}
+        </h1>
+        <p class="text-sm md:text-lg text-purple-200/70 max-w-2xl mx-auto px-4">
+            {{ settings.site_caption }}
+        </p>
     </div>
 </section>
+
 <section class="max-w-7xl mx-auto px-4 pb-20">
-    <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+    <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6 md:gap-8">
         {% for plan in plans %}
-        <div class="glass rounded-2xl overflow-hidden border border-purple-900/50 hover:border-purple-500/50 transition duration-300 flex flex-col group">
-            <!-- Non-cropped image frame -->
-            <div class="relative w-full h-60 bg-black/80 flex items-center justify-center p-3">
-                <img src="{{ plan.image_url }}" alt="{{ plan.title }}" class="w-full h-full object-contain group-hover:scale-105 transition duration-500" onerror="this.src='https://images.unsplash.com/photo-1618005182384-a83a8bd57fbe?w=600'">
-                <div class="absolute top-3 right-3 bg-purple-900/90 backdrop-blur-md px-3 py-1 rounded-full text-xs font-semibold text-purple-200 border border-purple-500/30">
-                    <i class="fa-solid fa-video mr-1"></i> {{ plan.videos_count }} Videos
+        <div class="glass-card rounded-3xl overflow-hidden border border-purple-900/50 hover:border-purple-500/50 transition duration-300 flex flex-col group shadow-xl">
+            <!-- 100% Un-cropped Image Frame with Flipkart/Amazon Style Offer Badge -->
+            <div class="relative w-full h-56 sm:h-60 bg-black/90 flex items-center justify-center p-3 overflow-hidden border-b border-purple-950">
+                <img src="{{ plan.image_url }}" alt="{{ plan.title }}" class="w-full h-full object-contain group-hover:scale-105 transition duration-500 drop-shadow-md" onerror="this.src='https://images.unsplash.com/photo-1618005182384-a83a8bd57fbe?w=600'">
+                
+                <!-- Flipkart / Amazon style "Special Offer" Badge -->
+                <div class="absolute top-3 left-3 bg-gradient-to-r from-amber-500 to-orange-600 text-white text-[10px] font-black uppercase px-2.5 py-1 rounded-lg shadow-lg tracking-wider flex items-center gap-1">
+                    <i class="fa-solid fa-tag"></i> Special Offer
+                </div>
+
+                <div class="absolute top-3 right-3 bg-purple-950/90 backdrop-blur-md px-3 py-1 rounded-full text-xs font-semibold text-purple-200 border border-purple-500/30">
+                    <i class="fa-solid fa-video text-purple-400 mr-1"></i> {{ plan.videos_count }} Videos
                 </div>
             </div>
-            <div class="p-6 flex flex-col flex-grow">
-                <h3 class="text-xl font-bold text-white group-hover:text-purple-300 transition">{{ plan.title }}</h3>
-                <p class="mt-2 text-sm text-purple-200/70 flex-grow line-clamp-2">{{ plan.description }}</p>
-                <div class="mt-4 mb-4 flex items-center justify-between">
-                    <span class="text-xs text-purple-300/60 block">Price</span>
-                    <span class="text-2xl font-black text-white">₹{{ plan.price }}</span>
+
+            <!-- Content Area -->
+            <div class="p-5 sm:p-6 flex flex-col flex-grow">
+                <h3 class="text-lg sm:text-xl font-black text-white group-hover:text-purple-300 transition line-clamp-1">{{ plan.title }}</h3>
+                <p class="mt-2 text-xs sm:text-sm text-purple-200/70 flex-grow line-clamp-2 leading-relaxed">{{ plan.description }}</p>
+                
+                <!-- Pricing Section with Original Strikethrough Price -->
+                <div class="mt-4 mb-5 flex items-center justify-between border-t border-purple-900/40 pt-4">
+                    <div>
+                        <span class="text-[11px] text-purple-400 font-bold uppercase tracking-wider block">Limited Deal</span>
+                        <div class="flex items-center gap-2 mt-0.5">
+                            <span class="text-2xl font-black text-white">₹{{ plan.price }}</span>
+                            <span class="text-xs text-purple-400/60 line-through font-semibold">₹{{ plan.original_price }}</span>
+                        </div>
+                    </div>
+                    <span class="px-2.5 py-1 rounded-lg bg-emerald-950/80 text-emerald-400 text-xs font-bold border border-emerald-500/30">
+                        Save {{ ((plan.original_price - plan.price) / plan.original_price * 100) | round(0) | int }}%
+                    </span>
                 </div>
-                <!-- Stacked Buttons: View Demo Top (Red), Buy Now Bottom (Gradient) -->
-                <div class="flex flex-col gap-2.5">
-                    <a href="/demo/{{ plan.id }}" class="w-full py-3 rounded-xl bg-red-600 hover:bg-red-500 text-white text-center text-sm font-bold shadow-lg transition flex items-center justify-center gap-2">
-                        <i class="fa-solid fa-play-circle"></i> View Demo
+
+                <!-- Vertically Stacked Buttons: View Demo (Red Top) & Buy Now (Gradient Bottom) -->
+                <div class="flex flex-col gap-2.5 mt-auto">
+                    <a href="/demo/{{ plan.id }}" class="w-full py-3.5 rounded-xl shiny-red-btn text-white text-center text-xs sm:text-sm font-bold shadow-lg flex items-center justify-center gap-2 tracking-wide">
+                        <i class="fa-solid fa-circle-play text-sm"></i> VIEW DEMO & DETAILS
                     </a>
-                    <a href="/payment/{{ plan.id }}" class="w-full py-3 rounded-xl bg-gradient-to-r from-purple-600 to-blue-600 hover:from-purple-500 hover:to-blue-500 text-white text-center text-sm font-bold shadow-lg glow-effect transition">
-                        Buy Now (₹{{ plan.price }})
+                    <a href="/payment/{{ plan.id }}" class="w-full py-3.5 rounded-xl shiny-btn text-white text-center text-xs sm:text-sm font-black shadow-lg glow-effect flex items-center justify-center gap-2 tracking-wide">
+                        <i class="fa-solid fa-bolt text-amber-300 text-sm"></i> BUY NOW (₹{{ plan.price }})
                     </a>
                 </div>
             </div>
@@ -392,40 +428,66 @@ INDEX_HTML = BASE_HEAD.replace('{% block content %}{% endblock %}', """
 """)
 
 DEMO_HTML = BASE_HEAD.replace('{% block content %}{% endblock %}', """
-<div class="max-w-4xl mx-auto px-4 py-12">
-    <a href="/" class="inline-flex items-center gap-2 text-sm font-semibold text-purple-400 hover:text-purple-300 mb-6">
+<div class="max-w-4xl mx-auto px-4 py-8 sm:py-12">
+    <a href="/" class="inline-flex items-center gap-2 text-xs sm:text-sm font-semibold text-purple-400 hover:text-purple-300 mb-6 transition">
         <i class="fa-solid fa-arrow-left"></i> Back to Courses
     </a>
-    <div class="glass rounded-3xl p-6 md:p-10 border border-purple-900/50 glow-effect flex flex-col gap-8">
+    <div class="glass rounded-3xl p-5 sm:p-8 md:p-10 border border-purple-900/50 glow-effect flex flex-col gap-8 shadow-2xl">
         
-        <!-- Main Thumbnail Frame (Un-cropped) -->
-        <div class="w-full rounded-2xl overflow-hidden border border-purple-500/30 h-96 bg-black/80 flex items-center justify-center p-4">
+        <!-- Main Thumbnail Frame (100% Un-cropped) -->
+        <div class="w-full rounded-2xl overflow-hidden border border-purple-500/30 h-72 sm:h-96 bg-black/90 flex items-center justify-center p-3 relative">
             <img src="{{ plan.image_url }}" alt="{{ plan.title }}" class="w-full h-full object-contain drop-shadow-2xl" onerror="this.src='https://images.unsplash.com/photo-1618005182384-a83a8bd57fbe?w=800'">
+            <div class="absolute top-4 left-4 bg-gradient-to-r from-amber-500 to-orange-600 text-white text-xs font-black uppercase px-3 py-1.5 rounded-xl shadow-lg">
+                <i class="fa-solid fa-tag mr-1"></i> Best Seller Deal
+            </div>
         </div>
 
-        <!-- Plan Details Structured Heading Section -->
-        <div class="glass p-6 rounded-2xl border border-purple-500/30 space-y-3">
-            <h1 class="text-3xl font-black text-white">{{ plan.title }}</h1>
-            <p class="text-purple-200/80 text-sm leading-relaxed">{{ plan.description }}</p>
-            <div class="grid grid-cols-1 sm:grid-cols-3 gap-4 pt-3 border-t border-purple-900/50 text-sm">
-                <div class="flex flex-col"><span class="text-purple-400 text-xs font-bold uppercase">Plan</span><span class="text-white font-bold">{{ plan.title }}</span></div>
-                <div class="flex flex-col"><span class="text-purple-400 text-xs font-bold uppercase">Videos</span><span class="text-white font-bold">{{ plan.videos_count }} Lessons</span></div>
-                <div class="flex flex-col"><span class="text-purple-400 text-xs font-bold uppercase">Validity</span><span class="text-emerald-400 font-bold">{{ plan.validity }}</span></div>
+        <!-- Structured Plan Details Box -->
+        <div class="glass-card p-5 sm:p-6 rounded-2xl border border-purple-500/30 space-y-4">
+            <h1 class="text-2xl sm:text-3xl font-black text-white leading-tight">{{ plan.title }}</h1>
+            <p class="text-purple-200/80 text-xs sm:text-sm leading-relaxed">{{ plan.description }}</p>
+            
+            <div class="grid grid-cols-1 sm:grid-cols-3 gap-3 pt-4 border-t border-purple-900/50 text-xs sm:text-sm">
+                <div class="flex flex-col bg-purple-950/50 p-3 rounded-xl border border-purple-900/40">
+                    <span class="text-purple-400 text-[10px] font-bold uppercase tracking-wider">Course Plan</span>
+                    <span class="text-white font-bold truncate mt-0.5">{{ plan.title }}</span>
+                </div>
+                <div class="flex flex-col bg-purple-950/50 p-3 rounded-xl border border-purple-900/40">
+                    <span class="text-purple-400 text-[10px] font-bold uppercase tracking-wider">Total Videos</span>
+                    <span class="text-white font-bold mt-0.5">{{ plan.videos_count }} HD Lessons</span>
+                </div>
+                <div class="flex flex-col bg-purple-950/50 p-3 rounded-xl border border-purple-900/40">
+                    <span class="text-purple-400 text-[10px] font-bold uppercase tracking-wider">Validity</span>
+                    <span class="text-emerald-400 font-bold mt-0.5 flex items-center gap-1"><i class="fa-solid fa-infinity"></i> {{ plan.validity }}</span>
+                </div>
+            </div>
+
+            <div class="flex items-center justify-between pt-2">
+                <div>
+                    <span class="text-xs text-purple-400 font-semibold">Special Discount Price</span>
+                    <div class="flex items-center gap-3">
+                        <span class="text-3xl font-black text-white">₹{{ plan.price }}</span>
+                        <span class="text-sm text-purple-400/60 line-through font-semibold">₹{{ plan.original_price }}</span>
+                    </div>
+                </div>
+                <span class="px-3 py-1 rounded-xl bg-emerald-950 text-emerald-400 text-xs font-black border border-emerald-500/30">
+                    You Save ₹{{ plan.original_price - plan.price }}
+                </span>
             </div>
         </div>
 
         <!-- Dynamic Demo Videos Stacked Vertically -->
         {% if demo_list %}
-        <div class="pt-6 border-t border-purple-900/40 flex flex-col gap-8">
-            <h3 class="text-xl font-bold text-white flex items-center gap-2">
-                <i class="fa-solid fa-play-circle text-red-500"></i> Course Demo Videos
+        <div class="pt-4 border-t border-purple-900/40 flex flex-col gap-6">
+            <h3 class="text-lg sm:text-xl font-bold text-white flex items-center gap-2">
+                <i class="fa-solid fa-play-circle text-red-500"></i> Course Preview & Demo Videos
             </h3>
             {% for v_url in demo_list %}
             {% if v_url %}
             <div class="flex flex-col gap-2">
-                <span class="text-sm font-bold text-purple-300 uppercase tracking-wider">Demo {{ loop.index }}</span>
+                <span class="text-xs font-bold text-purple-300 uppercase tracking-wider">Demo Video {{ loop.index }}</span>
                 <div class="w-full rounded-2xl overflow-hidden border border-purple-500/30 bg-black flex items-center justify-center shadow-2xl">
-                    <video controls preload="metadata" class="w-full max-h-[500px] object-contain focus:outline-none">
+                    <video controls preload="metadata" class="w-full max-h-[450px] object-contain focus:outline-none">
                         <source src="{{ v_url }}" type="video/mp4">
                         Your browser does not support the video tag.
                     </video>
@@ -436,18 +498,20 @@ DEMO_HTML = BASE_HEAD.replace('{% block content %}{% endblock %}', """
         </div>
         {% endif %}
 
-        <div class="p-6 rounded-2xl bg-purple-950/40 border border-purple-500/20">
-            <h4 class="font-bold text-purple-300 mb-3"><i class="fa-solid fa-circle-question mr-2"></i> Instructions</h4>
-            <div class="text-sm text-purple-200/80 whitespace-pre-line leading-relaxed">{{ plan.demo_instructions }}</div>
+        <div class="p-5 rounded-2xl bg-purple-950/40 border border-purple-500/20">
+            <h4 class="font-bold text-purple-300 mb-2 text-sm sm:text-base flex items-center gap-2">
+                <i class="fa-solid fa-circle-question text-purple-400"></i> Quick Instructions
+            </h4>
+            <div class="text-xs sm:text-sm text-purple-200/80 whitespace-pre-line leading-relaxed">{{ plan.demo_instructions }}</div>
         </div>
 
         <!-- Vertically Stacked Action Buttons -->
-        <div class="pt-6 border-t border-purple-900/40 flex flex-col gap-4">
-            <a href="{{ plan.telegram_url }}" target="_blank" class="w-full py-4 rounded-2xl bg-red-600 hover:bg-red-500 text-white text-center font-bold text-lg shadow-xl transition flex items-center justify-center gap-2">
-                <i class="fa-solid fa-headset"></i> Contact Support / Telegram Demo
+        <div class="pt-4 border-t border-purple-900/40 flex flex-col gap-3.5">
+            <a href="{{ plan.telegram_url }}" target="_blank" class="w-full py-4 rounded-2xl shiny-red-btn text-white text-center font-bold text-sm sm:text-base shadow-xl flex items-center justify-center gap-2">
+                <i class="fa-solid fa-headset text-lg"></i> Contact Support / Telegram Demo
             </a>
-            <a href="/payment/{{ plan.id }}" class="w-full py-4 rounded-2xl bg-gradient-to-r from-purple-600 to-blue-600 hover:from-purple-500 hover:to-blue-500 text-white text-center font-black text-lg shadow-xl glow-effect transition">
-                BUY NOW — UNLOCK PREMIUM ACCESS (₹{{ plan.price }})
+            <a href="/payment/{{ plan.id }}" class="w-full py-4 rounded-2xl shiny-btn text-white text-center font-black text-sm sm:text-base shadow-xl glow-effect flex items-center justify-center gap-2">
+                <i class="fa-solid fa-bolt text-amber-300"></i> BUY NOW — UNLOCK INSTANT ACCESS (₹{{ plan.price }})
             </a>
         </div>
     </div>
@@ -455,45 +519,47 @@ DEMO_HTML = BASE_HEAD.replace('{% block content %}{% endblock %}', """
 """)
 
 PAYMENT_HTML = BASE_HEAD.replace('{% block content %}{% endblock %}', """
-<div class="max-w-2xl mx-auto px-4 py-12">
-    <a href="/demo/{{ plan.id }}" class="inline-flex items-center gap-2 text-sm font-semibold text-purple-400 hover:text-purple-300 mb-6">
+<div class="max-w-xl mx-auto px-4 py-8 sm:py-12">
+    <a href="/demo/{{ plan.id }}" class="inline-flex items-center gap-2 text-xs sm:text-sm font-semibold text-purple-400 hover:text-purple-300 mb-6">
         <i class="fa-solid fa-arrow-left"></i> Back to Course
     </a>
-    <div class="glass rounded-3xl p-6 md:p-8 border border-purple-900/50 glow-effect relative">
+    <div class="glass rounded-3xl p-5 sm:p-8 border border-purple-900/50 glow-effect relative">
         <div class="text-center pb-6 border-b border-purple-900/40">
-            <span class="px-3 py-1 rounded-full text-xs font-bold uppercase bg-emerald-950 text-emerald-300 border border-emerald-500/30">
+            <span class="px-3 py-1 rounded-full text-[11px] font-bold uppercase bg-emerald-950 text-emerald-300 border border-emerald-500/30">
                 <i class="fa-solid fa-shield-halved mr-1"></i> SECURE UPI PAYMENT
             </span>
-            <h1 class="text-2xl font-black text-white mt-3">{{ plan.title }}</h1>
-            <p class="text-purple-300/70 text-sm mt-1">Amount Payable: <strong class="text-white text-lg">₹{{ plan.price }}</strong></p>
+            <h1 class="text-xl sm:text-2xl font-black text-white mt-3">{{ plan.title }}</h1>
+            <p class="text-purple-300/70 text-xs sm:text-sm mt-1">Amount Payable: <strong class="text-white text-base">₹{{ plan.price }}</strong></p>
         </div>
-        <div class="my-8 text-center bg-purple-950/60 p-6 rounded-2xl border border-purple-500/30">
-            <p class="text-xs font-semibold text-purple-300 mb-4">Scan QR with any UPI App (GPay, PhonePe, Paytm)</p>
+
+        <div class="my-6 text-center bg-purple-950/60 p-5 rounded-2xl border border-purple-500/30">
+            <p class="text-xs font-semibold text-purple-300 mb-3">Scan QR code using GPay, PhonePe, or Paytm</p>
             <div class="inline-block bg-white p-3 rounded-2xl shadow-xl">
-                <img src="https://api.qrserver.com/v1/create-qr-code/?size=200x200&data=upi://pay?pa={{ settings.upi_id }}&pn={{ settings.upi_name }}&am={{ plan.price }}&cu=INR" alt="UPI QR Code" class="w-48 h-48 mx-auto rounded-xl">
+                <img src="https://api.qrserver.com/v1/create-qr-code/?size=180x180&data=upi://pay?pa={{ settings.upi_id }}&pn={{ settings.upi_name }}&am={{ plan.price }}&cu=INR" alt="UPI QR Code" class="w-40 h-40 sm:w-48 sm:h-48 mx-auto rounded-xl">
             </div>
-            <div class="mt-4 flex items-center justify-center gap-2">
-                <span class="text-sm font-mono text-purple-200 bg-purple-900/60 px-4 py-2 rounded-xl border border-purple-500/30">{{ settings.upi_id }}</span>
-                <button onclick="navigator.clipboard.writeText('{{ settings.upi_id }}'); alert('UPI ID Copied!');" class="px-3 py-2 bg-purple-800 hover:bg-purple-700 text-white rounded-xl text-sm transition">
+            <div class="mt-3 flex items-center justify-center gap-2">
+                <span class="text-xs sm:text-sm font-mono text-purple-200 bg-purple-900/60 px-3 py-2 rounded-xl border border-purple-500/30 truncate max-w-[220px]">{{ settings.upi_id }}</span>
+                <button onclick="navigator.clipboard.writeText('{{ settings.upi_id }}'); alert('UPI ID Copied!');" class="px-3 py-2 bg-purple-800 hover:bg-purple-700 text-white rounded-xl text-xs transition">
                     <i class="fa-solid fa-copy"></i>
                 </button>
             </div>
         </div>
-        <div class="mb-8 p-4 rounded-xl bg-purple-950/40 border border-purple-500/20 text-xs text-purple-300/80 leading-relaxed whitespace-pre-line">
+
+        <div class="mb-6 p-4 rounded-xl bg-purple-950/40 border border-purple-500/20 text-xs text-purple-300/80 leading-relaxed whitespace-pre-line">
             {{ settings.payment_instructions }}
         </div>
-        
-        <form id="payment-form" action="/payment/{{ plan.id }}" method="POST" enctype="multipart/form-data" class="space-y-6" onsubmit="showLoadingPopup()">
+
+        <form id="payment-form" action="/payment/{{ plan.id }}" method="POST" enctype="multipart/form-data" class="space-y-5" onsubmit="showLoadingPopup()">
             <div>
-                <label class="block text-sm font-bold text-purple-200 mb-2">Enter Your 12-Digit UTR / Transaction Reference Number *</label>
-                <input type="text" name="utr" required placeholder="e.g. 432156789012" class="w-full px-4 py-3 rounded-xl bg-purple-950/60 border border-purple-500/30 text-white focus:outline-none focus:border-purple-500 transition font-mono">
+                <label class="block text-xs sm:text-sm font-bold text-purple-200 mb-2">12-Digit UTR / Transaction Reference Number *</label>
+                <input type="text" name="utr" required placeholder="e.g. 432156789012" class="w-full px-4 py-3 rounded-xl bg-purple-950/60 border border-purple-500/30 text-white text-sm focus:outline-none focus:border-purple-500 transition font-mono">
             </div>
             <div>
-                <label class="block text-sm font-bold text-purple-200 mb-2">Upload Payment Screenshot (JPG, PNG, WebP) *</label>
-                <input type="file" name="screenshot" accept="image/*" required class="w-full px-4 py-3 rounded-xl bg-purple-950/60 border border-purple-500/30 text-sm text-purple-300 file:mr-4 file:py-2 file:px-4 file:rounded-xl file:border-0 file:text-xs file:font-bold file:bg-purple-800 file:text-white hover:file:bg-purple-700 transition">
+                <label class="block text-xs sm:text-sm font-bold text-purple-200 mb-2">Upload Payment Screenshot *</label>
+                <input type="file" name="screenshot" accept="image/*" required class="w-full px-3 py-2.5 rounded-xl bg-purple-950/60 border border-purple-500/30 text-xs text-purple-300 file:mr-3 file:py-1.5 file:px-3 file:rounded-lg file:border-0 file:text-xs file:font-bold file:bg-purple-800 file:text-white hover:file:bg-purple-700 transition">
             </div>
-            <button type="submit" class="w-full py-4 rounded-2xl bg-gradient-to-r from-purple-600 to-blue-600 hover:from-purple-500 hover:to-blue-500 text-white font-black text-lg shadow-xl glow-effect transition">
-                SUBMIT PAYMENT DETAILS
+            <button type="submit" class="w-full py-4 rounded-2xl shiny-btn text-white font-black text-sm sm:text-base shadow-xl glow-effect transition flex items-center justify-center gap-2">
+                <i class="fa-solid fa-check-circle text-amber-300"></i> SUBMIT PAYMENT DETAILS
             </button>
         </form>
     </div>
@@ -501,10 +567,10 @@ PAYMENT_HTML = BASE_HEAD.replace('{% block content %}{% endblock %}', """
 
 <!-- Glassmorphism Payment Submitting Popup -->
 <div id="payment-loading-popup" class="fixed inset-0 z-50 hidden bg-black/80 backdrop-blur-md flex items-center justify-center p-4">
-    <div class="glass max-w-sm w-full rounded-3xl p-8 border border-purple-500/30 text-center flex flex-col items-center gap-4 glow-effect">
-        <div class="w-16 h-16 border-4 border-purple-900 border-t-emerald-400 rounded-full animate-spin"></div>
+    <div class="glass max-w-sm w-full rounded-3xl p-8 border border-purple-500/30 text-center flex flex-col items-center gap-4 glow-effect shadow-2xl">
+        <div class="w-14 h-14 border-4 border-purple-900 border-t-emerald-400 rounded-full animate-spin"></div>
         <h3 class="text-xl font-bold text-white">Payment Submitting...</h3>
-        <p class="text-xs text-purple-300/80">Please wait while we verify and record your payment details.</p>
+        <p class="text-xs text-purple-300/80">Please wait while we record and verify your transaction.</p>
     </div>
 </div>
 
@@ -516,17 +582,17 @@ function showLoadingPopup() {
 """)
 
 SUCCESS_HTML = BASE_HEAD.replace('{% block content %}{% endblock %}', """
-<div class="max-w-xl mx-auto px-4 py-16 text-center">
-    <div class="glass rounded-3xl p-8 border border-purple-900/50 glow-effect">
+<div class="max-w-xl mx-auto px-4 py-12 sm:py-16 text-center">
+    <div class="glass rounded-3xl p-6 sm:p-8 border border-purple-900/50 glow-effect">
         <!-- Big Green Tick Badge -->
-        <div class="w-20 h-20 bg-emerald-500/20 border-2 border-emerald-500 rounded-full flex items-center justify-center mx-auto text-emerald-400 text-4xl mb-6 shadow-xl">
+        <div class="w-20 h-20 bg-emerald-500/20 border-2 border-emerald-500 rounded-full flex items-center justify-center mx-auto text-emerald-400 text-4xl mb-6 shadow-2xl animate-bounce">
             <i class="fa-solid fa-check"></i>
         </div>
         <h1 class="text-2xl font-black text-white">Payment Submitted!</h1>
-        <p class="text-purple-300/80 text-sm mt-2">Your payment details and screenshot have been recorded successfully.</p>
+        <p class="text-purple-300/80 text-xs sm:text-sm mt-2">Your payment details and screenshot have been recorded successfully.</p>
         
         <!-- Plan & Order Details -->
-        <div class="my-6 p-5 rounded-2xl bg-purple-950/60 border border-purple-500/30 text-left space-y-3 text-sm">
+        <div class="my-6 p-5 rounded-2xl bg-purple-950/60 border border-purple-500/30 text-left space-y-3 text-xs sm:text-sm">
             <div class="flex justify-between border-b border-purple-900/40 pb-2"><span class="text-purple-400 font-semibold">Order ID:</span> <span class="font-mono text-white font-bold">{{ order.order_id }}</span></div>
             <div class="flex justify-between border-b border-purple-900/40 pb-2"><span class="text-purple-400 font-semibold">Course / Plan:</span> <span class="text-white font-bold">{{ order.course_name }}</span></div>
             <div class="flex justify-between border-b border-purple-900/40 pb-2"><span class="text-purple-400 font-semibold">Amount Paid:</span> <span class="text-white font-bold">₹{{ order.amount }}</span></div>
@@ -534,7 +600,7 @@ SUCCESS_HTML = BASE_HEAD.replace('{% block content %}{% endblock %}', """
             <div class="flex justify-between"><span class="text-purple-400 font-semibold">Status:</span> <span class="px-3 py-1 rounded-full text-xs font-bold bg-amber-950 text-amber-300 border border-amber-500/30">{{ order.status }}</span></div>
         </div>
         
-        <a href="/" class="inline-block px-8 py-3.5 rounded-xl bg-purple-900 hover:bg-purple-800 text-white font-bold text-sm border border-purple-500/30 transition">
+        <a href="/" class="inline-block px-8 py-3.5 rounded-xl shiny-btn text-white font-bold text-xs sm:text-sm shadow-lg transition">
             Return to Homepage
         </a>
     </div>
@@ -542,24 +608,24 @@ SUCCESS_HTML = BASE_HEAD.replace('{% block content %}{% endblock %}', """
 """)
 
 ADMIN_LOGIN_HTML = BASE_HEAD.replace('{% block content %}{% endblock %}', """
-<div class="max-w-md mx-auto px-4 py-20">
-    <div class="glass rounded-3xl p-8 border border-purple-900/50 glow-effect">
-        <div class="text-center mb-8">
-            <div class="w-16 h-16 bg-purple-900/50 border border-purple-500/30 rounded-2xl flex items-center justify-center mx-auto text-purple-300 text-2xl mb-4">
+<div class="max-w-md mx-auto px-4 py-16 sm:py-20">
+    <div class="glass rounded-3xl p-6 sm:p-8 border border-purple-900/50 glow-effect">
+        <div class="text-center mb-6">
+            <div class="w-16 h-16 bg-purple-900/50 border border-purple-500/30 rounded-2xl flex items-center justify-center mx-auto text-purple-300 text-2xl mb-4 shadow-inner">
                 <i class="fa-solid fa-lock"></i>
             </div>
-            <h1 class="text-2xl font-black text-white">Admin Login</h1>
+            <h1 class="text-xl sm:text-2xl font-black text-white">Admin Login</h1>
         </div>
-        <form action="/admin/login" method="POST" class="space-y-6">
+        <form action="/admin/login" method="POST" class="space-y-5">
             <div>
                 <label class="block text-xs font-bold uppercase tracking-wider text-purple-300 mb-2">Username</label>
-                <input type="text" name="username" required class="w-full px-4 py-3 rounded-xl bg-purple-950/60 border border-purple-500/30 text-white focus:outline-none focus:border-purple-500 transition">
+                <input type="text" name="username" required class="w-full px-4 py-3 rounded-xl bg-purple-950/60 border border-purple-500/30 text-white text-sm focus:outline-none focus:border-purple-500 transition">
             </div>
             <div>
                 <label class="block text-xs font-bold uppercase tracking-wider text-purple-300 mb-2">Password</label>
-                <input type="password" name="password" required class="w-full px-4 py-3 rounded-xl bg-purple-950/60 border border-purple-500/30 text-white focus:outline-none focus:border-purple-500 transition">
+                <input type="password" name="password" required class="w-full px-4 py-3 rounded-xl bg-purple-950/60 border border-purple-500/30 text-white text-sm focus:outline-none focus:border-purple-500 transition">
             </div>
-            <button type="submit" class="w-full py-3.5 rounded-xl bg-gradient-to-r from-purple-600 to-blue-600 hover:from-purple-500 hover:to-blue-500 text-white font-bold shadow-xl glow-effect transition">
+            <button type="submit" class="w-full py-3.5 rounded-xl shiny-btn text-white font-bold text-sm shadow-xl glow-effect transition">
                 LOGIN TO DASHBOARD
             </button>
         </form>
@@ -571,71 +637,74 @@ ADMIN_DASHBOARD_HTML = BASE_HEAD.replace('{% block content %}{% endblock %}', ""
 <div class="max-w-7xl mx-auto px-4 py-8">
     <div class="flex flex-col md:flex-row items-start md:items-center justify-between gap-4 mb-8">
         <div>
-            <h1 class="text-3xl font-black text-white">Admin Dashboard</h1>
-            <p class="text-purple-300/70 text-sm">Manage course plans, orders, and system settings.</p>
+            <h1 class="text-2xl sm:text-3xl font-black text-white">Admin Dashboard</h1>
+            <p class="text-purple-300/70 text-xs sm:text-sm">Manage course plans, orders, and system settings.</p>
         </div>
-        <div class="flex items-center gap-3">
-            <a href="/admin/reset-stats" onclick="return confirm('Are you sure you want to reset all orders and statistics?');" class="px-4 py-2 rounded-xl bg-amber-950/80 hover:bg-amber-900 text-amber-200 text-sm font-semibold border border-amber-500/30 transition">
-                <i class="fa-solid fa-rotate-right mr-1.5"></i> Reset Stats
+        <div class="flex flex-wrap items-center gap-2.5">
+            <a href="/admin/reset-stats" onclick="return confirm('Are you sure you want to reset all orders and statistics?');" class="px-3.5 py-2 rounded-xl bg-amber-950/80 hover:bg-amber-900 text-amber-200 text-xs font-semibold border border-amber-500/30 transition">
+                <i class="fa-solid fa-rotate-right mr-1"></i> Reset Stats
             </a>
-            <a href="/" class="px-4 py-2 rounded-xl bg-purple-900/60 hover:bg-purple-800 text-purple-200 text-sm font-semibold border border-purple-500/30 transition">
-                <i class="fa-solid fa-arrow-left mr-1.5"></i> Back to Website
+            <a href="/" class="px-3.5 py-2 rounded-xl bg-purple-900/60 hover:bg-purple-800 text-purple-200 text-xs font-semibold border border-purple-500/30 transition">
+                <i class="fa-solid fa-arrow-left mr-1"></i> Website
             </a>
-            <a href="/admin/logout" class="px-4 py-2 rounded-xl bg-red-950/80 hover:bg-red-900 text-red-200 text-sm font-semibold border border-red-500/30 transition">
-                <i class="fa-solid fa-right-from-bracket mr-1.5"></i> Logout
+            <a href="/admin/logout" class="px-3.5 py-2 rounded-xl bg-red-950/80 hover:bg-red-900 text-red-200 text-xs font-semibold border border-red-500/30 transition">
+                <i class="fa-solid fa-right-from-bracket mr-1"></i> Logout
             </a>
         </div>
     </div>
-    <div class="grid grid-cols-2 md:grid-cols-4 gap-4 mb-10">
-        <div class="glass p-5 rounded-2xl border border-purple-900/50">
-            <span class="text-xs text-purple-400 font-semibold uppercase">Total Visits</span>
-            <h3 class="text-2xl font-black text-white mt-1">{{ stats.visits }}</h3>
+    
+    <div class="grid grid-cols-2 md:grid-cols-4 gap-3 sm:gap-4 mb-8">
+        <div class="glass p-4 sm:p-5 rounded-2xl border border-purple-900/50">
+            <span class="text-[11px] text-purple-400 font-semibold uppercase">Total Visits</span>
+            <h3 class="text-xl sm:text-2xl font-black text-white mt-1">{{ stats.visits }}</h3>
         </div>
-        <div class="glass p-5 rounded-2xl border border-purple-900/50">
-            <span class="text-xs text-amber-400 font-semibold uppercase">Pending Payments</span>
-            <h3 class="text-2xl font-black text-white mt-1">{{ stats.pending }}</h3>
+        <div class="glass p-4 sm:p-5 rounded-2xl border border-purple-900/50">
+            <span class="text-[11px] text-amber-400 font-semibold uppercase">Pending</span>
+            <h3 class="text-xl sm:text-2xl font-black text-white mt-1">{{ stats.pending }}</h3>
         </div>
-        <div class="glass p-5 rounded-2xl border border-purple-900/50">
-            <span class="text-xs text-emerald-400 font-semibold uppercase">Approved Orders</span>
-            <h3 class="text-2xl font-black text-white mt-1">{{ stats.approved }}</h3>
+        <div class="glass p-4 sm:p-5 rounded-2xl border border-purple-900/50">
+            <span class="text-[11px] text-emerald-400 font-semibold uppercase">Approved</span>
+            <h3 class="text-xl sm:text-2xl font-black text-white mt-1">{{ stats.approved }}</h3>
         </div>
-        <div class="glass p-5 rounded-2xl border border-purple-900/50">
-            <span class="text-xs text-blue-400 font-semibold uppercase">Verified Revenue</span>
-            <h3 class="text-2xl font-black text-white mt-1">₹{{ stats.revenue }}</h3>
+        <div class="glass p-4 sm:p-5 rounded-2xl border border-purple-900/50">
+            <span class="text-[11px] text-blue-400 font-semibold uppercase">Revenue</span>
+            <h3 class="text-xl sm:text-2xl font-black text-white mt-1">₹{{ stats.revenue }}</h3>
         </div>
     </div>
+
     <div class="flex gap-2 border-b border-purple-900/50 pb-4 mb-8 overflow-x-auto">
-        <button onclick="switchTab('orders')" id="tab-btn-orders" class="px-5 py-2.5 rounded-xl font-bold text-sm bg-purple-900 text-white shadow-md transition">Orders ({{ orders|length }})</button>
-        <button onclick="switchTab('plans')" id="tab-btn-plans" class="px-5 py-2.5 rounded-xl font-bold text-sm bg-purple-950/60 text-purple-300 hover:bg-purple-900/50 transition">Course Plans ({{ plans|length }})</button>
-        <button onclick="switchTab('settings')" id="tab-btn-settings" class="px-5 py-2.5 rounded-xl font-bold text-sm bg-purple-950/60 text-purple-300 hover:bg-purple-900/50 transition">Settings & Bot</button>
+        <button onclick="switchTab('orders')" id="tab-btn-orders" class="px-4 py-2 rounded-xl font-bold text-xs sm:text-sm bg-purple-900 text-white shadow-md transition whitespace-nowrap">Orders ({{ orders|length }})</button>
+        <button onclick="switchTab('plans')" id="tab-btn-plans" class="px-4 py-2 rounded-xl font-bold text-xs sm:text-sm bg-purple-950/60 text-purple-300 hover:bg-purple-900/50 transition whitespace-nowrap">Course Plans ({{ plans|length }})</button>
+        <button onclick="switchTab('settings')" id="tab-btn-settings" class="px-4 py-2 rounded-xl font-bold text-xs sm:text-sm bg-purple-950/60 text-purple-300 hover:bg-purple-900/50 transition whitespace-nowrap">Settings & Bot</button>
     </div>
+
     <div id="tab-orders" class="space-y-6">
         <div class="glass rounded-2xl border border-purple-900/50 overflow-hidden">
-            <div class="p-5 border-b border-purple-900/50 font-bold text-white">Payment Orders & UTR Submissions</div>
+            <div class="p-4 sm:p-5 border-b border-purple-900/50 font-bold text-white text-sm">Payment Orders & UTR Submissions</div>
             <div class="overflow-x-auto">
-                <table class="w-full text-left border-collapse text-sm">
+                <table class="w-full text-left border-collapse text-xs sm:text-sm">
                     <thead>
-                        <tr class="bg-purple-950/60 text-purple-300 text-xs uppercase border-b border-purple-900/50">
-                            <th class="p-4">Order ID / Date</th>
-                            <th class="p-4">Course</th>
-                            <th class="p-4">Amount</th>
-                            <th class="p-4">UTR Number</th>
-                            <th class="p-4">Screenshot</th>
-                            <th class="p-4">Status</th>
-                            <th class="p-4 text-center">Actions</th>
+                        <tr class="bg-purple-950/60 text-purple-300 text-[10px] sm:text-xs uppercase border-b border-purple-900/50">
+                            <th class="p-3 sm:p-4">Order ID / Date</th>
+                            <th class="p-3 sm:p-4">Course</th>
+                            <th class="p-3 sm:p-4">Amount</th>
+                            <th class="p-3 sm:p-4">UTR Number</th>
+                            <th class="p-3 sm:p-4">Screenshot</th>
+                            <th class="p-3 sm:p-4">Status</th>
+                            <th class="p-3 sm:p-4 text-center">Actions</th>
                         </tr>
                     </thead>
                     <tbody class="divide-y divide-purple-900/30">
                         {% for order in orders %}
                         <tr class="hover:bg-purple-900/10 transition">
-                            <td class="p-4">
+                            <td class="p-3 sm:p-4">
                                 <span class="font-mono font-bold text-white block">{{ order.order_id }}</span>
-                                <span class="text-xs text-purple-400">{{ order.created_at.strftime('%Y-%m-%d %H:%M') }}</span>
+                                <span class="text-[10px] text-purple-400">{{ order.created_at.strftime('%Y-%m-%d %H:%M') }}</span>
                             </td>
-                            <td class="p-4 font-semibold text-purple-200">{{ order.course_name }}</td>
-                            <td class="p-4 font-bold text-white">₹{{ order.amount }}</td>
-                            <td class="p-4 font-mono text-purple-300">{{ order.utr }}</td>
-                            <td class="p-4">
+                            <td class="p-3 sm:p-4 font-semibold text-purple-200">{{ order.course_name }}</td>
+                            <td class="p-3 sm:p-4 font-bold text-white">₹{{ order.amount }}</td>
+                            <td class="p-3 sm:p-4 font-mono text-purple-300">{{ order.utr }}</td>
+                            <td class="p-3 sm:p-4">
                                 {% if order.screenshot %}
                                 <a href="/static/uploads/{{ order.screenshot }}" target="_blank" class="text-blue-400 hover:underline text-xs flex items-center gap-1 font-semibold">
                                     <i class="fa-solid fa-image"></i> View
@@ -644,13 +713,13 @@ ADMIN_DASHBOARD_HTML = BASE_HEAD.replace('{% block content %}{% endblock %}', ""
                                 <span class="text-xs text-purple-400/50">None</span>
                                 {% endif %}
                             </td>
-                            <td class="p-4">
-                                <span class="px-2.5 py-1 rounded-full text-xs font-bold {% if order.status == 'Approved' %}bg-emerald-950 text-emerald-300 border border-emerald-500/30{% elif order.status == 'Rejected' %}bg-red-950 text-red-300 border border-red-500/30{% else %}bg-amber-950 text-amber-300 border border-amber-500/30{% endif %}">{{ order.status }}</span>
+                            <td class="p-3 sm:p-4">
+                                <span class="px-2 py-0.5 rounded-full text-[10px] sm:text-xs font-bold {% if order.status == 'Approved' %}bg-emerald-950 text-emerald-300 border border-emerald-500/30{% elif order.status == 'Rejected' %}bg-red-950 text-red-300 border border-red-500/30{% else %}bg-amber-950 text-amber-300 border border-amber-500/30{% endif %}">{{ order.status }}</span>
                             </td>
-                            <td class="p-4 text-center">
-                                <div class="flex items-center justify-center gap-2">
-                                    <a href="/admin/order/status/{{ order.id }}/Approved" class="px-2.5 py-1.5 rounded-lg bg-emerald-600 hover:bg-emerald-500 text-white text-xs font-bold transition" title="Approve"><i class="fa-solid fa-check"></i></a>
-                                    <a href="/admin/order/status/{{ order.id }}/Rejected" class="px-2.5 py-1.5 rounded-lg bg-red-600 hover:bg-red-500 text-white text-xs font-bold transition" title="Reject"><i class="fa-solid fa-xmark"></i></a>
+                            <td class="p-3 sm:p-4 text-center">
+                                <div class="flex items-center justify-center gap-1.5">
+                                    <a href="/admin/order/status/{{ order.id }}/Approved" class="px-2 py-1 rounded-lg bg-emerald-600 hover:bg-emerald-500 text-white text-xs font-bold transition" title="Approve"><i class="fa-solid fa-check"></i></a>
+                                    <a href="/admin/order/status/{{ order.id }}/Rejected" class="px-2 py-1 rounded-lg bg-red-600 hover:bg-red-500 text-white text-xs font-bold transition" title="Reject"><i class="fa-solid fa-xmark"></i></a>
                                 </div>
                             </td>
                         </tr>
@@ -662,25 +731,26 @@ ADMIN_DASHBOARD_HTML = BASE_HEAD.replace('{% block content %}{% endblock %}', ""
             </div>
         </div>
     </div>
+
     <div id="tab-plans" class="hidden space-y-6">
         <div class="flex justify-between items-center">
-            <h2 class="text-xl font-bold text-white">Manage Course Plans</h2>
-            <button onclick="openPlanModal()" class="px-4 py-2.5 rounded-xl bg-purple-600 hover:bg-purple-500 text-white font-bold text-sm shadow-lg transition"><i class="fa-solid fa-plus mr-1.5"></i> Add New Plan</button>
+            <h2 class="text-lg sm:text-xl font-bold text-white">Manage Course Plans</h2>
+            <button onclick="openPlanModal()" class="px-4 py-2 rounded-xl shiny-btn text-white font-bold text-xs sm:text-sm shadow-lg transition"><i class="fa-solid fa-plus mr-1"></i> Add New Plan</button>
         </div>
-        <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+        <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6">
             {% for plan in plans %}
             <div class="glass rounded-2xl overflow-hidden border border-purple-900/50 flex flex-col">
-                <div class="relative h-44 bg-black/60 flex items-center justify-center p-2">
+                <div class="relative h-40 bg-black/80 flex items-center justify-center p-2">
                     <img src="{{ plan.image_url }}" alt="{{ plan.title }}" class="w-full h-full object-contain" onerror="this.src='https://images.unsplash.com/photo-1618005182384-a83a8bd57fbe?w=400'">
-                    <div class="absolute top-3 right-3 bg-purple-900/90 px-2.5 py-1 rounded-full text-xs font-bold text-purple-200">₹{{ plan.price }}</div>
+                    <div class="absolute top-2 right-2 bg-purple-900/90 px-2 py-0.5 rounded-lg text-xs font-bold text-purple-200">₹{{ plan.price }}</div>
                 </div>
-                <div class="p-5 flex flex-col flex-grow">
-                    <h3 class="font-bold text-white text-lg">{{ plan.title }}</h3>
+                <div class="p-4 sm:p-5 flex flex-col flex-grow">
+                    <h3 class="font-bold text-white text-base truncate">{{ plan.title }}</h3>
                     <p class="text-xs text-purple-300/70 mt-1 flex-grow line-clamp-2">{{ plan.description }}</p>
-                    <div class="mt-4 pt-4 border-t border-purple-900/50 flex items-center justify-between">
+                    <div class="mt-4 pt-3 border-t border-purple-900/50 flex items-center justify-between">
                         <span class="text-xs {% if plan.enabled %}text-emerald-400{% else %}text-red-400{% endif %} font-semibold">● {% if plan.enabled %}Active{% else %}Disabled{% endif %}</span>
                         <div class="flex gap-2">
-                            <button onclick='editPlan({{ {"id": plan.id, "title": plan.title, "description": plan.description, "price": plan.price, "videos_count": plan.videos_count, "validity": plan.validity, "image_url": plan.image_url, "demo_video_urls": plan.demo_video_urls or "", "telegram_url": plan.telegram_url, "demo_instructions": plan.demo_instructions, "enabled": plan.enabled}|tojson|safe }})' class="px-3 py-1.5 rounded-lg bg-purple-800 hover:bg-purple-700 text-white text-xs font-bold transition">Edit</button>
+                            <button onclick='editPlan({{ {"id": plan.id, "title": plan.title, "description": plan.description, "price": plan.price, "original_price": plan.original_price, "videos_count": plan.videos_count, "validity": plan.validity, "image_url": plan.image_url, "demo_video_urls": plan.demo_video_urls or "", "telegram_url": plan.telegram_url, "demo_instructions": plan.demo_instructions, "enabled": plan.enabled}|tojson|safe }})' class="px-3 py-1.5 rounded-lg bg-purple-800 hover:bg-purple-700 text-white text-xs font-bold transition">Edit</button>
                             <a href="/admin/plan/delete/{{ plan.id }}" onclick="return confirm('Delete this plan?');" class="px-3 py-1.5 rounded-lg bg-red-950 hover:bg-red-900 text-red-200 text-xs font-bold transition">Delete</a>
                         </div>
                     </div>
@@ -689,108 +759,113 @@ ADMIN_DASHBOARD_HTML = BASE_HEAD.replace('{% block content %}{% endblock %}', ""
             {% endfor %}
         </div>
     </div>
+
     <div id="tab-settings" class="hidden space-y-6">
-        <div class="glass rounded-3xl p-6 md:p-8 border border-purple-900/50">
-            <h2 class="text-xl font-bold text-white mb-6">Website, UPI & Telegram Bot Settings</h2>
-            <form action="/admin/settings/update" method="POST" class="space-y-6">
+        <div class="glass rounded-3xl p-5 sm:p-8 border border-purple-900/50">
+            <h2 class="text-lg sm:text-xl font-bold text-white mb-6">Website, UPI & Telegram Bot Settings</h2>
+            <form action="/admin/settings/update" method="POST" class="space-y-5">
                 <div>
                     <label class="block text-xs font-bold uppercase tracking-wider text-purple-300 mb-2">Website Name</label>
-                    <input type="text" name="site_name" value="{{ settings.site_name }}" required class="w-full px-4 py-3 rounded-xl bg-purple-950/60 border border-purple-500/30 text-white">
+                    <input type="text" name="site_name" value="{{ settings.site_name }}" required class="w-full px-4 py-3 rounded-xl bg-purple-950/60 border border-purple-500/30 text-white text-sm">
                 </div>
                 <div>
                     <label class="block text-xs font-bold uppercase tracking-wider text-purple-300 mb-2">Website Caption</label>
-                    <input type="text" name="site_caption" value="{{ settings.site_caption }}" required class="w-full px-4 py-3 rounded-xl bg-purple-950/60 border border-purple-500/30 text-white">
+                    <input type="text" name="site_caption" value="{{ settings.site_caption }}" required class="w-full px-4 py-3 rounded-xl bg-purple-950/60 border border-purple-500/30 text-white text-sm">
                 </div>
-                <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
+                <div class="grid grid-cols-1 md:grid-cols-2 gap-5">
                     <div>
                         <label class="block text-xs font-bold uppercase tracking-wider text-purple-300 mb-2">UPI ID</label>
-                        <input type="text" name="upi_id" value="{{ settings.upi_id }}" required class="w-full px-4 py-3 rounded-xl bg-purple-950/60 border border-purple-500/30 text-white font-mono">
+                        <input type="text" name="upi_id" value="{{ settings.upi_id }}" required class="w-full px-4 py-3 rounded-xl bg-purple-950/60 border border-purple-500/30 text-white font-mono text-sm">
                     </div>
                     <div>
                         <label class="block text-xs font-bold uppercase tracking-wider text-purple-300 mb-2">UPI Account Name</label>
-                        <input type="text" name="upi_name" value="{{ settings.upi_name }}" required class="w-full px-4 py-3 rounded-xl bg-purple-950/60 border border-purple-500/30 text-white">
+                        <input type="text" name="upi_name" value="{{ settings.upi_name }}" required class="w-full px-4 py-3 rounded-xl bg-purple-950/60 border border-purple-500/30 text-white text-sm">
                     </div>
                 </div>
-                <div class="grid grid-cols-1 md:grid-cols-2 gap-6 pt-4 border-t border-purple-900/50">
+                <div class="grid grid-cols-1 md:grid-cols-2 gap-5 pt-3 border-t border-purple-900/50">
                     <div>
-                        <label class="block text-xs font-bold uppercase tracking-wider text-purple-300 mb-2">Telegram Bot Token (For Notifications)</label>
-                        <input type="text" name="telegram_bot_token" value="{{ settings.telegram_bot_token }}" placeholder="e.g. 123456789:ABCdefGhIJKlmNoPQRsTUVwxyZ" class="w-full px-4 py-3 rounded-xl bg-purple-950/60 border border-purple-500/30 text-white font-mono">
+                        <label class="block text-xs font-bold uppercase tracking-wider text-purple-300 mb-2">Telegram Bot Token</label>
+                        <input type="text" name="telegram_bot_token" value="{{ settings.telegram_bot_token }}" placeholder="e.g. 123456789:ABC..." class="w-full px-4 py-3 rounded-xl bg-purple-950/60 border border-purple-500/30 text-white font-mono text-sm">
                     </div>
                     <div>
                         <label class="block text-xs font-bold uppercase tracking-wider text-purple-300 mb-2">Admin Telegram Chat ID</label>
-                        <input type="text" name="telegram_chat_id" value="{{ settings.telegram_chat_id }}" placeholder="e.g. 987654321" class="w-full px-4 py-3 rounded-xl bg-purple-950/60 border border-purple-500/30 text-white font-mono">
+                        <input type="text" name="telegram_chat_id" value="{{ settings.telegram_chat_id }}" placeholder="e.g. 987654321" class="w-full px-4 py-3 rounded-xl bg-purple-950/60 border border-purple-500/30 text-white font-mono text-sm">
                     </div>
                 </div>
                 <div>
                     <label class="block text-xs font-bold uppercase tracking-wider text-purple-300 mb-2">Telegram Support Bot URL</label>
-                    <input type="text" name="telegram_support" value="{{ settings.telegram_support }}" required class="w-full px-4 py-3 rounded-xl bg-purple-950/60 border border-purple-500/30 text-white">
+                    <input type="text" name="telegram_support" value="{{ settings.telegram_support }}" required class="w-full px-4 py-3 rounded-xl bg-purple-950/60 border border-purple-500/30 text-white text-sm">
                 </div>
                 <div>
                     <label class="block text-xs font-bold uppercase tracking-wider text-purple-300 mb-2">Payment Instructions</label>
-                    <textarea name="payment_instructions" rows="3" class="w-full px-4 py-3 rounded-xl bg-purple-950/60 border border-purple-500/30 text-white">{{ settings.payment_instructions }}</textarea>
+                    <textarea name="payment_instructions" rows="3" class="w-full px-4 py-3 rounded-xl bg-purple-950/60 border border-purple-500/30 text-white text-sm">{{ settings.payment_instructions }}</textarea>
                 </div>
-                <button type="submit" class="px-8 py-3.5 rounded-xl bg-gradient-to-r from-purple-600 to-blue-600 text-white font-bold shadow-xl transition">SAVE CHANGES</button>
+                <button type="submit" class="px-8 py-3 rounded-xl shiny-btn text-white font-bold text-sm shadow-xl transition">SAVE CHANGES</button>
             </form>
         </div>
     </div>
 </div>
 
 <div id="plan-modal" class="fixed inset-0 z-50 hidden bg-black/80 backdrop-blur-md flex items-center justify-center p-4 overflow-y-auto">
-    <div class="glass max-w-xl w-full rounded-3xl p-6 md:p-8 border border-purple-900/50 my-8">
+    <div class="glass max-w-xl w-full rounded-3xl p-6 sm:p-8 border border-purple-900/50 my-8">
         <div class="flex justify-between items-center mb-6">
-            <h3 id="modal-title" class="text-xl font-bold text-white">Add New Course Plan</h3>
+            <h3 id="modal-title" class="text-lg sm:text-xl font-bold text-white">Add New Course Plan</h3>
             <button onclick="closePlanModal()" class="text-purple-400 hover:text-white text-xl"><i class="fa-solid fa-xmark"></i></button>
         </div>
         <form action="/admin/plan/save" method="POST" class="space-y-4">
             <input type="hidden" name="plan_id" id="modal_plan_id">
             <div>
                 <label class="block text-xs font-bold uppercase tracking-wider text-purple-300 mb-1">Course Title</label>
-                <input type="text" name="title" id="modal_title" required class="w-full px-4 py-2.5 rounded-xl bg-purple-950/60 border border-purple-500/30 text-white">
+                <input type="text" name="title" id="modal_title" required class="w-full px-4 py-2.5 rounded-xl bg-purple-950/60 border border-purple-500/30 text-white text-sm">
             </div>
-            <div class="grid grid-cols-3 gap-3">
+            <div class="grid grid-cols-2 sm:grid-cols-4 gap-3">
                 <div>
-                    <label class="block text-xs font-bold uppercase tracking-wider text-purple-300 mb-1">Price (₹)</label>
-                    <input type="number" name="price" id="modal_price" required class="w-full px-4 py-2.5 rounded-xl bg-purple-950/60 border border-purple-500/30 text-white">
+                    <label class="block text-xs font-bold uppercase tracking-wider text-purple-300 mb-1">Offer Price (₹)</label>
+                    <input type="number" name="price" id="modal_price" required class="w-full px-3 py-2.5 rounded-xl bg-purple-950/60 border border-purple-500/30 text-white text-sm">
                 </div>
                 <div>
-                    <label class="block text-xs font-bold uppercase tracking-wider text-purple-300 mb-1">Videos Count</label>
-                    <input type="number" name="videos_count" id="modal_videos" required class="w-full px-4 py-2.5 rounded-xl bg-purple-950/60 border border-purple-500/30 text-white">
+                    <label class="block text-xs font-bold uppercase tracking-wider text-purple-300 mb-1">Original (₹)</label>
+                    <input type="number" name="original_price" id="modal_orig_price" required class="w-full px-3 py-2.5 rounded-xl bg-purple-950/60 border border-purple-500/30 text-white text-sm">
+                </div>
+                <div>
+                    <label class="block text-xs font-bold uppercase tracking-wider text-purple-300 mb-1">Videos</label>
+                    <input type="number" name="videos_count" id="modal_videos" required class="w-full px-3 py-2.5 rounded-xl bg-purple-950/60 border border-purple-500/30 text-white text-sm">
                 </div>
                 <div>
                     <label class="block text-xs font-bold uppercase tracking-wider text-purple-300 mb-1">Validity</label>
-                    <input type="text" name="validity" id="modal_validity" value="Lifetime Access" required class="w-full px-4 py-2.5 rounded-xl bg-purple-950/60 border border-purple-500/30 text-white">
+                    <input type="text" name="validity" id="modal_validity" value="Lifetime Access" required class="w-full px-3 py-2.5 rounded-xl bg-purple-950/60 border border-purple-500/30 text-white text-sm">
                 </div>
             </div>
             <div>
-                <label class="block text-xs font-bold uppercase tracking-wider text-purple-300 mb-1">Main Thumbnail Image URL</label>
-                <input type="text" name="image_url" id="modal_image_url" oninput="updatePreview('modal_image_url', 'modal_img_preview')" required class="w-full px-4 py-2.5 rounded-xl bg-purple-950/60 border border-purple-500/30 text-white">
-                <div class="mt-3 w-full h-32 rounded-xl overflow-hidden border border-purple-500/30 bg-black/80 flex items-center justify-center p-2">
+                <label class="block text-xs font-bold uppercase tracking-wider text-purple-300 mb-1">Thumbnail Image URL</label>
+                <input type="text" name="image_url" id="modal_image_url" oninput="updatePreview('modal_image_url', 'modal_img_preview')" required class="w-full px-4 py-2.5 rounded-xl bg-purple-950/60 border border-purple-500/30 text-white text-sm">
+                <div class="mt-3 w-full h-32 rounded-xl overflow-hidden border border-purple-500/30 bg-black/90 flex items-center justify-center p-2">
                     <img id="modal_img_preview" src="" alt="Preview" class="w-full h-full object-contain" onerror="this.src='https://images.unsplash.com/photo-1618005182384-a83a8bd57fbe?w=400'">
                 </div>
             </div>
             <div>
                 <label class="block text-xs font-bold uppercase tracking-wider text-purple-300 mb-1">Demo Video URLs (Comma Separated)</label>
-                <input type="text" name="demo_video_urls" id="modal_demo_video_urls" placeholder="https://..., https://..." class="w-full px-4 py-2.5 rounded-xl bg-purple-950/60 border border-purple-500/30 text-white text-xs">
+                <input type="text" name="demo_video_urls" id="modal_demo_video_urls" placeholder="https://..., https://..." class="w-full px-4 py-2.5 rounded-xl bg-purple-950/60 border border-purple-500/30 text-white text-xs font-mono">
             </div>
             <div>
-                <label class="block text-xs font-bold uppercase tracking-wider text-purple-300 mb-1">Support / Contact Link</label>
-                <input type="text" name="telegram_url" id="modal_telegram" required class="w-full px-4 py-2.5 rounded-xl bg-purple-950/60 border border-purple-500/30 text-white">
+                <label class="block text-xs font-bold uppercase tracking-wider text-purple-300 mb-1">Support Link</label>
+                <input type="text" name="telegram_url" id="modal_telegram" required class="w-full px-4 py-2.5 rounded-xl bg-purple-950/60 border border-purple-500/30 text-white text-sm">
             </div>
             <div>
-                <label class="block text-xs font-bold uppercase tracking-wider text-purple-300 mb-1">Course Description</label>
-                <textarea name="description" id="modal_desc" rows="3" required class="w-full px-4 py-2.5 rounded-xl bg-purple-950/60 border border-purple-500/30 text-white"></textarea>
+                <label class="block text-xs font-bold uppercase tracking-wider text-purple-300 mb-1">Description</label>
+                <textarea name="description" id="modal_desc" rows="3" required class="w-full px-4 py-2.5 rounded-xl bg-purple-950/60 border border-purple-500/30 text-white text-sm"></textarea>
             </div>
             <div>
                 <label class="block text-xs font-bold uppercase tracking-wider text-purple-300 mb-1">Instructions</label>
-                <textarea name="demo_instructions" id="modal_instructions" rows="2" required class="w-full px-4 py-2.5 rounded-xl bg-purple-950/60 border border-purple-500/30 text-white"></textarea>
+                <textarea name="demo_instructions" id="modal_instructions" rows="2" required class="w-full px-4 py-2.5 rounded-xl bg-purple-950/60 border border-purple-500/30 text-white text-sm"></textarea>
             </div>
             <div class="flex items-center gap-3 pt-2">
                 <input type="checkbox" name="enabled" id="modal_enabled" checked class="w-5 h-5 accent-purple-600 rounded">
                 <label class="text-sm font-semibold text-purple-200">Enable this plan on homepage</label>
             </div>
             <div class="pt-4 flex gap-3">
-                <button type="submit" class="flex-1 py-3 rounded-xl bg-purple-600 hover:bg-purple-500 text-white font-bold transition">Save Plan</button>
-                <button type="button" onclick="closePlanModal()" class="px-6 py-3 rounded-xl bg-purple-950 hover:bg-purple-900 text-purple-300 font-bold transition">Cancel</button>
+                <button type="submit" class="flex-1 py-3 rounded-xl shiny-btn text-white font-bold text-sm transition">Save Plan</button>
+                <button type="button" onclick="closePlanModal()" class="px-6 py-3 rounded-xl bg-purple-950 hover:bg-purple-900 text-purple-300 font-bold text-sm transition">Cancel</button>
             </div>
         </form>
     </div>
@@ -801,11 +876,11 @@ function switchTab(tab) {
     document.getElementById('tab-orders').classList.add('hidden');
     document.getElementById('tab-plans').classList.add('hidden');
     document.getElementById('tab-settings').classList.add('hidden');
-    document.getElementById('tab-btn-orders').className = 'px-5 py-2.5 rounded-xl font-bold text-sm bg-purple-950/60 text-purple-300 hover:bg-purple-900/50 transition';
-    document.getElementById('tab-btn-plans').className = 'px-5 py-2.5 rounded-xl font-bold text-sm bg-purple-950/60 text-purple-300 hover:bg-purple-900/50 transition';
-    document.getElementById('tab-btn-settings').className = 'px-5 py-2.5 rounded-xl font-bold text-sm bg-purple-950/60 text-purple-300 hover:bg-purple-900/50 transition';
+    document.getElementById('tab-btn-orders').className = 'px-4 py-2 rounded-xl font-bold text-xs sm:text-sm bg-purple-950/60 text-purple-300 hover:bg-purple-900/50 transition whitespace-nowrap';
+    document.getElementById('tab-btn-plans').className = 'px-4 py-2 rounded-xl font-bold text-xs sm:text-sm bg-purple-950/60 text-purple-300 hover:bg-purple-900/50 transition whitespace-nowrap';
+    document.getElementById('tab-btn-settings').className = 'px-4 py-2 rounded-xl font-bold text-xs sm:text-sm bg-purple-950/60 text-purple-300 hover:bg-purple-900/50 transition whitespace-nowrap';
     document.getElementById('tab-' + tab).classList.remove('hidden');
-    document.getElementById('tab-btn-' + tab).className = 'px-5 py-2.5 rounded-xl font-bold text-sm bg-purple-900 text-white shadow-md transition';
+    document.getElementById('tab-btn-' + tab).className = 'px-4 py-2 rounded-xl font-bold text-xs sm:text-sm bg-purple-900 text-white shadow-md transition whitespace-nowrap';
 }
 function updatePreview(inputId, previewId) {
     const url = document.getElementById(inputId).value;
@@ -817,6 +892,7 @@ function openPlanModal() {
     document.getElementById('modal_plan_id').value = '';
     document.getElementById('modal_title').value = '';
     document.getElementById('modal_price').value = '199';
+    document.getElementById('modal_orig_price').value = '999';
     document.getElementById('modal_videos').value = '25';
     document.getElementById('modal_validity').value = 'Lifetime Access';
     document.getElementById('modal_image_url').value = '';
@@ -833,6 +909,7 @@ function editPlan(plan) {
     document.getElementById('modal_plan_id').value = plan.id;
     document.getElementById('modal_title').value = plan.title;
     document.getElementById('modal_price').value = plan.price;
+    document.getElementById('modal_orig_price').value = plan.original_price || 999;
     document.getElementById('modal_videos').value = plan.videos_count;
     document.getElementById('modal_validity').value = plan.validity || 'Lifetime Access';
     document.getElementById('modal_image_url').value = plan.image_url;
