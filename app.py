@@ -306,7 +306,7 @@ def admin_save_plan():
         )
         db.session.add(new_plan)
     db.session.commit()
-    flash('Course plan saved successfully!', 'success')
+    flash(' plan saved successfully!', 'success')
     return redirect(url_for('admin_dashboard'))
 
 @app.route('/admin/plan/delete/<int:plan_id>')
@@ -316,7 +316,7 @@ def admin_delete_plan(plan_id):
     plan = Plan.query.get_or_404(plan_id)
     db.session.delete(plan)
     db.session.commit()
-    flash('Course plan deleted successfully!', 'success')
+    flash(' plan deleted successfully!', 'success')
     return redirect(url_for('admin_dashboard'))
 
 @app.route('/admin/settings/update', methods=['POST'])
@@ -412,7 +412,7 @@ INDEX_HTML = BASE_HEAD.replace('{% block content %}{% endblock %}', """
 <section class="py-10 md:py-14 px-4 text-center">
     <div class="max-w-4xl mx-auto space-y-3">
         <span class="inline-flex items-center gap-1.5 px-4 py-1.5 rounded-full text-xs font-bold uppercase tracking-wider bg-purple-950 text-purple-300 border border-purple-500/30 shadow-inner">
-            <i class="fa-solid fa-bolt text-amber-400"></i> Premium Learning Platform
+            <i class="fa-solid fa-bolt text-amber-400"></i> premium porn store 
         </span>
         <h1 class="text-3xl sm:text-4xl md:text-6xl font-black tracking-tight bg-gradient-to-r from-white via-purple-200 to-blue-300 bg-clip-text text-transparent px-2">
             {{ settings.site_name }}
@@ -540,7 +540,7 @@ DEMO_HTML = BASE_HEAD.replace('{% block content %}{% endblock %}', """
         {% if demo_list %}
         <div class="pt-4 border-t border-purple-900/40 flex flex-col gap-6">
             <h3 class="text-lg sm:text-xl font-bold text-white flex items-center gap-2">
-                <i class="fa-solid fa-play-circle text-red-500"></i> Course Preview & Demo Videos
+                <i class="fa-solid fa-play-circle text-red-500"></i>  Demo Videos
             </h3>
             {% for v_url in demo_list %}
             {% if v_url %}
@@ -568,7 +568,7 @@ DEMO_HTML = BASE_HEAD.replace('{% block content %}{% endblock %}', """
         <!-- Vertically Stacked Action Buttons with Shining Animation -->
         <div class="pt-4 border-t border-purple-900/40 flex flex-col gap-3.5">
             <a href="{{ plan.telegram_url }}" target="_blank" class="w-full py-4 rounded-2xl shiny-red-btn text-white text-center font-bold text-sm sm:text-base shadow-xl flex items-center justify-center gap-2">
-                <i class="fa-solid fa-headset text-lg"></i> Contact Support / Telegram Demo
+                <i class="fa-solid fa-headset text-lg"></i> Telegram Support 
             </a>
             <a href="/payment/{{ plan.id }}" class="w-full py-4 rounded-2xl shiny-btn text-white text-center font-black text-sm sm:text-base shadow-xl glow-effect flex items-center justify-center gap-2">
                 <i class="fa-solid fa-bolt text-amber-300"></i> BUY NOW — UNLOCK INSTANT ACCESS (₹{{ plan.price }})
