@@ -60,7 +60,7 @@ class Analytics(db.Model):
     id = db.Column(db.Integer, primary_key=True)
     total_visits = db.Column(db.Integer, default=0)
 
-# --- INITIALIZE DATABASE & DEFAULT DATA ---
+# --- INITIALIZE DATABASE & PERMANENT DEFAULT DATA ---
 with app.app_context():
     db.create_all()
     
@@ -84,6 +84,7 @@ with app.app_context():
         if not Setting.query.filter_by(key=k).first():
             db.session.add(Setting(key=k, value=v))
             
+    # Sirf tabhi default plans load honge jab database poori tarah empty ho (Permanent fix for reset issue)
     if Plan.query.count() == 0:
         default_caption = "1. 𝙔𝙊𝙐 𝘾𝘼𝙉 𝙎𝘼𝙑𝙀 𝙄𝙉 𝙂𝘼𝙇𝙇𝙀𝙍𝙔 ✅\n2. 𝙉𝙊 𝘼𝙉𝙔 𝘼𝘿𝙎 ❌\n3. 𝙃𝙄𝙂𝙃 𝙌𝙐𝘼𝙇𝙄𝙏𝙔 𝙑𝙄𝘿𝙀𝙊𝙎 😍\n4. 𝙉𝙀𝙒 𝙑𝙄𝘿𝙀𝙊𝙎 𝙐𝙋𝙇𝙊𝘼𝘿𝙀𝘿 𝙀𝙑𝙀𝙍𝙔 𝙎𝙐𝙉𝘿𝘼𝙔 ✅"
         initial_plans = [
@@ -306,7 +307,7 @@ def admin_save_plan():
         )
         db.session.add(new_plan)
     db.session.commit()
-    flash(' plan saved successfully!', 'success')
+    flash('Course plan saved successfully!', 'success')
     return redirect(url_for('admin_dashboard'))
 
 @app.route('/admin/plan/delete/<int:plan_id>')
@@ -316,7 +317,7 @@ def admin_delete_plan(plan_id):
     plan = Plan.query.get_or_404(plan_id)
     db.session.delete(plan)
     db.session.commit()
-    flash(' plan deleted successfully!', 'success')
+    flash('Course plan deleted successfully!', 'success')
     return redirect(url_for('admin_dashboard'))
 
 @app.route('/admin/settings/update', methods=['POST'])
@@ -412,7 +413,7 @@ INDEX_HTML = BASE_HEAD.replace('{% block content %}{% endblock %}', """
 <section class="py-10 md:py-14 px-4 text-center">
     <div class="max-w-4xl mx-auto space-y-3">
         <span class="inline-flex items-center gap-1.5 px-4 py-1.5 rounded-full text-xs font-bold uppercase tracking-wider bg-purple-950 text-purple-300 border border-purple-500/30 shadow-inner">
-            <i class="fa-solid fa-bolt text-amber-400"></i> premium porn store 
+            <i class="fa-solid fa-bolt text-amber-400"></i> Premium Learning Platform
         </span>
         <h1 class="text-3xl sm:text-4xl md:text-6xl font-black tracking-tight bg-gradient-to-r from-white via-purple-200 to-blue-300 bg-clip-text text-transparent px-2">
             {{ settings.site_name }}
@@ -465,7 +466,7 @@ INDEX_HTML = BASE_HEAD.replace('{% block content %}{% endblock %}', """
                     </span>
                 </div>
 
-                <!-- Stacked Buttons: View Demo (Red Top) & Buy Now (Gradient Bottom) with Shining Animation -->
+                <!-- Stacked Buttons with Shining Animation -->
                 <div class="flex flex-col gap-2.5 mt-auto">
                     <a href="/demo/{{ plan.id }}" class="w-full py-3.5 rounded-xl shiny-red-btn text-white text-center text-xs sm:text-sm font-bold shadow-lg flex items-center justify-center gap-2 tracking-wide">
                         <i class="fa-solid fa-circle-play text-sm"></i> VIEW DEMO & DETAILS
@@ -536,18 +537,18 @@ DEMO_HTML = BASE_HEAD.replace('{% block content %}{% endblock %}', """
             </div>
         </div>
 
-        <!-- Dynamic Demo Videos Stacked Vertically -->
+        <!-- Dynamic Demo Videos Stacked Vertically with Download Restriction -->
         {% if demo_list %}
         <div class="pt-4 border-t border-purple-900/40 flex flex-col gap-6">
             <h3 class="text-lg sm:text-xl font-bold text-white flex items-center gap-2">
-                <i class="fa-solid fa-play-circle text-red-500"></i>  Demo Videos
+                <i class="fa-solid fa-play-circle text-red-500"></i> Course Preview & Demo Videos
             </h3>
             {% for v_url in demo_list %}
             {% if v_url %}
             <div class="flex flex-col gap-2">
                 <span class="text-xs font-bold text-purple-300 uppercase tracking-wider">Demo Video {{ loop.index }}</span>
                 <div class="w-full rounded-2xl overflow-hidden border border-purple-500/30 bg-black flex items-center justify-center shadow-2xl">
-                    <video controls preload="metadata" class="w-full max-h-[450px] object-contain focus:outline-none">
+                    <video controls controlsList="nodownload" oncontextmenu="return false;" preload="metadata" class="w-full max-h-[450px] object-contain focus:outline-none">
                         <source src="{{ v_url }}" type="video/mp4">
                         Your browser does not support the video tag.
                     </video>
@@ -565,10 +566,10 @@ DEMO_HTML = BASE_HEAD.replace('{% block content %}{% endblock %}', """
             <div class="text-xs sm:text-sm text-purple-200/80 whitespace-pre-line leading-relaxed">{{ plan.demo_instructions }}</div>
         </div>
 
-        <!-- Vertically Stacked Action Buttons with Shining Animation -->
+        <!-- Vertically Stacked Action Buttons -->
         <div class="pt-4 border-t border-purple-900/40 flex flex-col gap-3.5">
             <a href="{{ plan.telegram_url }}" target="_blank" class="w-full py-4 rounded-2xl shiny-red-btn text-white text-center font-bold text-sm sm:text-base shadow-xl flex items-center justify-center gap-2">
-                <i class="fa-solid fa-headset text-lg"></i> Telegram Support 
+                <i class="fa-solid fa-headset text-lg"></i> Contact Support / Telegram Demo
             </a>
             <a href="/payment/{{ plan.id }}" class="w-full py-4 rounded-2xl shiny-btn text-white text-center font-black text-sm sm:text-base shadow-xl glow-effect flex items-center justify-center gap-2">
                 <i class="fa-solid fa-bolt text-amber-300"></i> BUY NOW — UNLOCK INSTANT ACCESS (₹{{ plan.price }})
@@ -866,7 +867,7 @@ ADMIN_DASHBOARD_HTML = BASE_HEAD.replace('{% block content %}{% endblock %}', ""
     </div>
 </div>
 
-<!-- Plan Modal (Fixed Overflow & Screen Fit) -->
+<!-- Plan Modal -->
 <div id="plan-modal" class="fixed inset-0 z-50 hidden bg-black/80 backdrop-blur-md flex items-center justify-center p-2 sm:p-4 overflow-y-auto">
     <div class="glass max-w-xl w-full rounded-3xl p-5 sm:p-8 border border-purple-900/50 my-6 max-h-[90vh] overflow-y-auto">
         <div class="flex justify-between items-center mb-4">
