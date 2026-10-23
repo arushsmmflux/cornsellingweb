@@ -37,9 +37,9 @@ class Plan(db.Model):
     price = db.Column(db.Integer, nullable=False, default=199)
     videos_count = db.Column(db.Integer, nullable=False, default=25)
     image_url = db.Column(db.String(500), nullable=False)
-    demo_video_urls = db.Column(db.Text, nullable=True)  # Comma separated video URLs
+    demo_video_urls = db.Column(db.Text, nullable=True)
     telegram_url = db.Column(db.String(500), default="https://t.me/NexusSupportBot")
-    demo_instructions = db.Column(db.Text, default="1. Below scroll karke saare demo videos dekhein\n2. Stream smoothly without any lag\n3. Click Buy Now to join full course")
+    demo_instructions = db.Column(db.Text, default="1. Neeche scroll karke saare demo videos dekhein\n2. Stream smoothly without any lag\n3. Click Buy Now to join full course")
     enabled = db.Column(db.Boolean, default=True)
     order_index = db.Column(db.Integer, default=0)
 
@@ -295,6 +295,18 @@ def admin_order_status(order_id, status):
         db.session.commit()
     return redirect(url_for('admin_dashboard'))
 
+@app.route('/admin/reset-stats')
+def admin_reset_stats():
+    if not session.get('admin_logged'):
+        return redirect(url_for('admin_login'))
+    Order.query.delete()
+    analytics = Analytics.query.first()
+    if analytics:
+        analytics.total_visits = 0
+    db.session.commit()
+    flash('All orders and statistics have been reset successfully!', 'success')
+    return redirect(url_for('admin_dashboard'))
+
 # --- HTML TEMPLATES ---
 BASE_HEAD = """
 <!DOCTYPE html>
@@ -379,7 +391,7 @@ DEMO_HTML = BASE_HEAD.replace('{% block content %}{% endblock %}', """
     </a>
     <div class="glass rounded-3xl p-6 md:p-10 border border-purple-900/50 glow-effect flex flex-col gap-8">
         
-        <!-- Main Thumbnail View -->
+        <!-- Main Thumbnail View without cropping -->
         <div class="w-full rounded-2xl overflow-hidden border border-purple-500/30 h-96 bg-black/80 flex items-center justify-center p-4">
             <img src="{{ plan.image_url }}" alt="{{ plan.title }}" class="w-full h-full object-contain drop-shadow-2xl" onerror="this.src='https://images.unsplash.com/photo-1618005182384-a83a8bd57fbe?w=800'">
         </div>
@@ -396,7 +408,7 @@ DEMO_HTML = BASE_HEAD.replace('{% block content %}{% endblock %}', """
             </div>
         </div>
 
-        <!-- Dynamic Demo Videos Stacked Vertically -->
+        <!-- Dynamic Demo Videos Stacked Vertically with original aspect ratio sizing -->
         {% if demo_list %}
         <div class="pt-6 border-t border-purple-900/40 flex flex-col gap-8">
             <h3 class="text-xl font-bold text-white flex items-center gap-2">
@@ -406,8 +418,8 @@ DEMO_HTML = BASE_HEAD.replace('{% block content %}{% endblock %}', """
             {% if v_url %}
             <div class="flex flex-col gap-2">
                 <span class="text-sm font-bold text-purple-300 uppercase tracking-wider">Demo {{ loop.index }}</span>
-                <div class="w-full rounded-2xl overflow-hidden border border-purple-500/30 bg-black shadow-2xl">
-                    <video controls preload="metadata" class="w-full h-80 object-cover focus:outline-none">
+                <div class="w-full rounded-2xl overflow-hidden border border-purple-500/30 bg-black flex items-center justify-center shadow-2xl">
+                    <video controls preload="metadata" class="w-full max-h-[500px] object-contain focus:outline-none">
                         <source src="{{ v_url }}" type="video/mp4">
                         Your browser does not support the video tag.
                     </video>
@@ -423,7 +435,7 @@ DEMO_HTML = BASE_HEAD.replace('{% block content %}{% endblock %}', """
             <div class="text-sm text-purple-200/80 whitespace-pre-line leading-relaxed">{{ plan.demo_instructions }}</div>
         </div>
 
-        <!-- Vertically Stacked Action Buttons -->
+        <!-- Vertically Stacked Action Buttons with Red View Demo Button -->
         <div class="pt-6 border-t border-purple-900/40 flex flex-col gap-4">
             <a href="{{ plan.telegram_url }}" target="_blank" class="w-full py-4 rounded-2xl bg-red-600 hover:bg-red-500 text-white text-center font-bold text-lg shadow-xl transition flex items-center justify-center gap-2">
                 <i class="fa-solid fa-headset"></i> Contact Support / Telegram Demo
@@ -538,6 +550,9 @@ ADMIN_DASHBOARD_HTML = BASE_HEAD.replace('{% block content %}{% endblock %}', ""
             <p class="text-purple-300/70 text-sm">Manage course plans, orders, and system settings.</p>
         </div>
         <div class="flex items-center gap-3">
+            <a href="/admin/reset-stats" onclick="return confirm('Are you sure you want to reset all orders and statistics?');" class="px-4 py-2 rounded-xl bg-amber-950/80 hover:bg-amber-900 text-amber-200 text-sm font-semibold border border-amber-500/30 transition">
+                <i class="fa-solid fa-rotate-right mr-1.5"></i> Reset Stats
+            </a>
             <a href="/" class="px-4 py-2 rounded-xl bg-purple-900/60 hover:bg-purple-800 text-purple-200 text-sm font-semibold border border-purple-500/30 transition">
                 <i class="fa-solid fa-arrow-left mr-1.5"></i> Back to Website
             </a>
@@ -724,7 +739,7 @@ ADMIN_DASHBOARD_HTML = BASE_HEAD.replace('{% block content %}{% endblock %}', ""
                 </div>
             </div>
             <div>
-                <label class="block text-xs font-bold uppercase tracking-wider text-purple-300 mb-1">Demo Video URLs (Comma Separated for Demo 1, Demo 2, etc.)</label>
+                <label class="block text-xs font-bold uppercase tracking-wider text-purple-300 mb-1">Demo Video URLs (Comma Separated)</label>
                 <input type="text" name="demo_video_urls" id="modal_demo_video_urls" placeholder="https://..., https://..." class="w-full px-4 py-2.5 rounded-xl bg-purple-950/60 border border-purple-500/30 text-white text-xs">
             </div>
             <div>
@@ -777,7 +792,7 @@ function openPlanModal() {
     document.getElementById('modal_img_preview').src = '';
     document.getElementById('modal_telegram').value = 'https://t.me/NexusSupportBot';
     document.getElementById('modal_desc').value = '';
-    document.getElementById('modal_instructions').value = '1. Below scroll karke saare demo videos dekhein\\n2. Stream smoothly without any lag\\n3. Click Buy Now to join full course';
+    document.getElementById('modal_instructions').value = '1. Neeche scroll karke saare demo videos dekhein\\n2. Stream smoothly without any lag\\n3. Click Buy Now to join full course';
     document.getElementById('modal_enabled').checked = true;
     document.getElementById('plan-modal').classList.remove('hidden');
 }
