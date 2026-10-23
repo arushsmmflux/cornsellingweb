@@ -2,7 +2,7 @@ import os
 import json
 import requests
 from datetime import datetime
-from flask import Flask, render_template_string, request, redirect, url_for, session, flash
+from flask import Flask, render_template_string, request, redirect, url_for, session, flash, send_from_directory
 from flask_sqlalchemy import SQLAlchemy
 from werkzeug.security import generate_password_hash, check_password_hash
 
@@ -34,14 +34,14 @@ class Plan(db.Model):
     id = db.Column(db.Integer, primary_key=True)
     title = db.Column(db.String(200), nullable=False)
     description = db.Column(db.Text, nullable=False)
-    price = db.Column(db.Integer, nullable=False, default=199)
-    original_price = db.Column(db.Integer, nullable=False, default=999)
-    videos_count = db.Column(db.Integer, nullable=False, default=25)
-    validity = db.Column(db.String(100), nullable=False, default="Lifetime Access")
+    price = db.Column(db.Integer, nullable=False, default=49)
+    original_price = db.Column(db.Integer, nullable=False, default=90)
+    videos_count = db.Column(db.String(50), nullable=False, default="50000+")
+    validity = db.Column(db.String(100), nullable=False, default="180 days")
     image_url = db.Column(db.String(500), nullable=False)
     demo_video_urls = db.Column(db.Text, nullable=True)
     telegram_url = db.Column(db.String(500), default="https://t.me/NexusSupportBot")
-    demo_instructions = db.Column(db.Text, default="1. Neeche scroll karke saare demo videos dekhein\n2. Stream smoothly without any lag\n3. Click Buy Now to join full course")
+    demo_instructions = db.Column(db.Text, default="You will get the Telegram channel link where all premium videos will be available.")
     enabled = db.Column(db.Boolean, default=True)
     order_index = db.Column(db.Integer, default=0)
 
@@ -85,19 +85,56 @@ with app.app_context():
             db.session.add(Setting(key=k, value=v))
             
     if Plan.query.count() == 0:
+        default_caption = "1. 𝙔𝙊𝙐 𝘾𝘼𝙉 𝙎𝘼𝙑𝙀 𝙄𝙉 𝙂𝘼𝙇𝙇𝙀𝙍𝙔 ✅\n2. 𝙉𝙊 𝘼𝙉𝙔 𝘼𝘿𝙎 ❌\n3. 𝙃𝙄𝙂𝙃 𝙌𝙐𝘼𝙇𝙄𝙏𝙔 𝙑𝙄𝘿𝙀𝙊𝙎 😍\n4. 𝙉𝙀𝙒 𝙑𝙄𝘿𝙀𝙊𝙎 𝙐𝙋𝙇𝙊𝘼𝘿𝙀𝘿 𝙀𝙑𝙀𝙍𝙔 𝙎𝙐𝙉𝘿𝘼𝙔 ✅"
         initial_plans = [
-            ("Python Mastery & Backend Pro", "Build robust backend applications, APIs, and automated systems with Python.", 199, 999, 30, "Lifetime Access", "https://i.ibb.co/Fb6S1mYg/course1.jpg", "https://www.w3schools.com/html/mov_bbb.mp4,https://www.w3schools.com/html/mov_bbb.mp4"),
-            ("Full Stack Web Development Bootcamp", "Master HTML, CSS, JavaScript, React, and Node.js from scratch.", 299, 1499, 45, "Lifetime Access", "https://i.ibb.co/ZRqKVvRQ/course2.jpg", "https://www.w3schools.com/html/mov_bbb.mp4"),
-            ("Advanced React & Next.js Masterclass", "Build lightning-fast, SEO-optimized web applications with modern React.", 249, 1299, 28, "Lifetime Access", "https://i.ibb.co/21H7BGM2/course3.jpg", ""),
-            ("Data Science & Machine Learning Pro", "Analyze complex datasets and build predictive AI models using Python.", 399, 1999, 50, "Lifetime Access", "https://i.ibb.co/QF2v05qK/course4.jpg", ""),
-            ("Cybersecurity & Ethical Hacking 2026", "Learn penetration testing, network security, and vulnerability assessment.", 349, 1599, 35, "Lifetime Access", "https://i.ibb.co/5X0hc5dd/course5.jpg", ""),
-            ("UI/UX Design Master Course", "Design stunning user interfaces and seamless experiences in Figma.", 199, 999, 22, "Lifetime Access", "https://i.ibb.co/HLw36KQ4/course6.jpg", ""),
-            ("Android & iOS App Development", "Create cross-platform mobile applications using Flutter and React Native.", 299, 1499, 40, "Lifetime Access", "https://i.ibb.co/9kKCd6ZF/course7.jpg", ""),
-            ("Cloud Computing & AWS DevOps", "Master cloud infrastructure, Docker, Kubernetes, and CI/CD pipelines.", 449, 1999, 38, "Lifetime Access", "https://i.ibb.co/C5KZBm7f/course8.jpg", ""),
-            ("AI & Generative Prompt Engineering", "Leverage LLMs, AI agents, and prompt frameworks to supercharge productivity.", 199, 999, 20, "Lifetime Access", "https://i.ibb.co/qFhKnzcH/course9.jpg", ""),
-            ("Digital Marketing & Growth Hacking", "Scale brands, run high-converting ad campaigns, and master SEO.", 199, 999, 25, "Lifetime Access", "https://i.ibb.co/84598K8j/course10.jpg", "")
+            (
+                "Ultimate Masterclass Pack 1", default_caption, 49, "50000+", "180 days",
+                "https://i.ibb.co/Fb6S1mYg/course1.jpg",
+                "https://videotourl.com/videos/1791607740001-dfef0130-88bb-4ca0-948d-b857ba8fc867.mp4,https://videotourl.com/videos/1791607674607-203922d8-e261-4085-90fc-4be2fd62a6fb.mp4,https://videotourl.com/videos/1791607662133-116f8c11-861a-4d4c-94a4-411fbd79a4f4.mp4,https://videotourl.com/videos/1791607553470-a87b7709-29e5-449b-89d2-49ce97c8e367.mp4,https://videotourl.com/videos/1791607607288-b1cc3341-7d49-473e-8544-840992806dab.mp4,https://videotourl.com/videos/1791607585444-8a7d8e39-2917-4d23-949e-c048fcbacb2f.mp4,https://videotourl.com/videos/1791607617748-9c8da0dd-313e-4a4d-862b-7ccf034383b7.mp4"
+            ),
+            (
+                "Exclusive Video Bundle 2", default_caption, 49, "45000+", "180 days",
+                "https://i.ibb.co/ZRqKVvRQ/course2.jpg",
+                "https://videotourl.com/videos/1791609530271-d1845e11-78bd-4465-a0e3-3e0dd57fb424.mp4,https://videotourl.com/videos/1791610410648-c50ab2d2-b1b2-4998-8f5f-43a5f719b603.mp4,https://videotourl.com/videos/1791609652325-1646ca32-e73f-4a5a-9874-a0f4e401c6bb.mp4,https://videotourl.com/videos/1791609624603-358124e2-dbc4-43b2-9772-e18c1df57397.mp4,https://videotourl.com/videos/1791609569957-a7ce2e8a-e185-4dc6-893c-298a2d9c1b4c.mp4"
+            ),
+            (
+                "Premium Creator Pack 3", default_caption, 49, "70000+", "180 days",
+                "https://i.ibb.co/21H7BGM2/course3.jpg",
+                "https://videotourl.com/videos/1791598226633-9d219b40-bf0b-4774-b493-6449c47d5ef1.mp4,https://videotourl.com/videos/1791598035486-79178a34-a631-49d2-870e-ff3425f1c058.mp4,https://videotourl.com/videos/1791611314862-1e0e5b81-0a04-436a-9749-4f5e9115404f.mp4,https://videotourl.com/videos/1791598059935-f6722923-e315-4b97-aaeb-e7b0af379f2b.mp4,https://videotourl.com/videos/1791598126801-a117ace0-e399-46e6-b697-0d3da6efeedd.mp4,https://videotourl.com/videos/1791598104865-7bca6c3f-db24-465d-9688-d153131af1e5.mp4,https://videotourl.com/videos/1791598207010-15f8101c-d87e-4e83-bd6a-43a333204662.mp4"
+            ),
+            (
+                "Pro Video Collection 4", default_caption, 69, "40000+", "180 days",
+                "https://i.ibb.co/QF2v05qK/course4.jpg",
+                "https://videotourl.com/videos/1791598317965-12b2368c-6035-4e43-b708-df28bcd246b6.mp4,https://videotourl.com/videos/1791609986226-0b727823-bf05-42b7-80e8-c949f04b95ab.mp4,https://videotourl.com/videos/1791598333066-6d6fc74f-945c-4641-99d1-d862e59790d4.mp4,https://videotourl.com/videos/1791598348006-882fbe39-db59-4bb7-8636-1c2645fb93c0.mp4,https://videotourl.com/videos/1791611260635-789f7a13-25cd-4204-8ffc-455168319040.mp4,https://videotourl.com/videos/1791598360862-d0ddd962-c4e7-4c98-a860-d360bf6779f8.mp4,https://videotourl.com/videos/1791601968259-cb7b49a5-a8c5-45f9-9156-e08f71b052d0.mp4,https://videotourl.com/videos/1791598382840-4245fa8e-38f8-4737-8bb9-a2b8641a3d0f.mp4,https://videotourl.com/videos/1791598397313-ff9dd5ef-d489-4715-a2ca-a71c8923f162.mp4"
+            ),
+            (
+                "Advanced Media Pack 5", default_caption, 58, "30000+", "180 days",
+                "https://i.ibb.co/5X0hc5dd/course5.jpg",
+                "https://videotourl.com/videos/1791609855846-9b6bac98-1fcf-4d60-b612-3e5abaf6be7e.mp4,https://videotourl.com/videos/1791614058029-1220e2df-44c4-467d-bbd7-755af32ada0c.mp4"
+            ),
+            (
+                "Starter Creators Pack 6", default_caption, 39, "56000+", "180 days",
+                "https://i.ibb.co/HLw36KQ4/course6.jpg",
+                "https://videotourl.com/videos/1791611037316-4db456f2-f82c-4468-9f48-381341ed6e55.mp4,https://videotourl.com/videos/1791611085614-c863517b-d989-4d6f-b6ef-d23db0b73f5a.mp4,https://videotourl.com/videos/1791611220352-ba6538bc-4db1-401e-81f7-88c53824e27f.mp4,https://videotourl.com/videos/1791609479203-02acf86c-6132-4bc2-8041-9f43ab529748.mp4,https://videotourl.com/videos/1791611168222-86d679dd-8a24-46fb-8b06-d59cc97e84c2.mp4,https://videotourl.com/videos/1791611005214-c25159ac-d514-4eff-8061-a25465ff6eba.mp4"
+            ),
+            (
+                "Mega Creator Bundle 7", default_caption, 49, "67000+", "180 days",
+                "https://i.ibb.co/9kKCd6ZF/course7.jpg",
+                "https://videotourl.com/videos/1791611423923-36dbbbf3-84c1-4754-a7e4-dc05798eaa03.mp4,https://videotourl.com/videos/1791611350514-052fe889-5ac7-4446-91ef-2f928070e131.mp4,https://videotourl.com/videos/1791609591492-b5b0f616-27c5-436f-9aa9-e70720337677.mp4,https://videotourl.com/videos/1791609952353-7ee9382f-6db6-4c43-86ed-c8f418a3282c.mp4,https://videotourl.com/videos/1791609450717-98fd3d4d-533c-46fc-a290-9f9f937b6721.mp4"
+            ),
+            (
+                "Elite Video Library 8", "1. 𝙔𝙊𝙐 𝘾𝘼𝙉 𝙎𝘼𝙑𝙀 𝙄𝙉 𝙂𝘼𝙇𝙇𝙀𝙍𝙔 ✅\n2. 𝙉𝙊 𝘼𝙉𝙔 𝘼𝘿𝙎 ❌\n3. 𝙃𝙄𝙂𝙃 𝙌𝙐𝘼𝙇𝙄𝙏𝙔 𝙑𝙄𝘿𝙀𝙊𝙎 😍", 49, "18000+", "180 days",
+                "https://i.ibb.co/C5KZBm7f/course8.jpg",
+                "https://videotourl.com/videos/1791611713436-2f106a4b-9ee1-4d9b-8e06-c30a0fe309e7.mp4,https://videotourl.com/videos/1791611779829-f05b75a9-65c7-441d-ad89-5d5f15301b01.mp4"
+            ),
+            (
+                "Super Viral Pack 9", "1. 𝙔𝙊𝙐 𝘾𝘼𝙉 𝙎𝘼𝙑𝙀 𝙄𝙉 𝙂𝘼𝙇𝙇𝙀𝙍𝙔 ✅\n2. 𝙉𝙊 𝘼𝙉𝙔 𝘼𝘿𝙎 ❌\n3. 𝙃𝙄𝙂𝙃 𝙌𝙐𝘼𝙇𝙄𝙏𝙔 𝙑𝙄𝘿𝙀𝙊𝙎 😍\n4. 𝙉𝙀𝙒 𝙑𝙄𝘿𝙀𝙊𝙎 𝙐𝙋𝙇𝙊𝘼𝘿𝙀𝘿 𝙀𝙑𝙀𝙍𝙔 𝙁𝙍𝙄𝘿𝘼𝙔 ✅.", 69, "70000+", "180 days",
+                "https://i.ibb.co/qFhKnzcH/course9.jpg",
+                "https://videotourl.com/videos/1791611593469-187437c5-8f84-41c6-afa1-3d61feb9ff72.mp4,https://videotourl.com/videos/1791611552865-c2cf6f7d-1544-4c34-9bdb-5e5fb2092584.mp4"
+            )
         ]
-        for idx, (title, desc, price, orig_price, vids, val, img, demo_vids) in enumerate(initial_plans):
+        for idx, (title, desc, price, vids, val, img, demo_vids) in enumerate(initial_plans):
+            orig_price = round(price * 1.80)
             p = Plan(title=title, description=desc, price=price, original_price=orig_price, videos_count=vids, validity=val, image_url=img, demo_video_urls=demo_vids, order_index=idx)
             db.session.add(p)
             
@@ -191,6 +228,13 @@ def payment_success(order_id):
     order = Order.query.filter_by(order_id=order_id).first_or_404()
     return render_template_string(SUCCESS_HTML, settings=settings, order=order)
 
+@app.route('/static/uploads/<filename>')
+def uploaded_file(filename):
+    if os.environ.get('VERCEL'):
+        return send_from_directory('/tmp/uploads', filename)
+    else:
+        return send_from_directory('static/uploads', filename)
+
 @app.route('/admin/login', methods=['GET', 'POST'])
 def admin_login():
     settings = get_settings()
@@ -232,13 +276,13 @@ def admin_save_plan():
     plan_id = request.form.get('plan_id')
     title = request.form.get('title')
     description = request.form.get('description')
-    price = int(request.form.get('price', 199))
-    original_price = int(request.form.get('original_price', 999))
-    videos_count = int(request.form.get('videos_count', 25))
-    validity = request.form.get('validity', 'Lifetime Access')
+    price = int(request.form.get('price', 49))
+    original_price = round(price * 1.80)
+    videos_count = request.form.get('videos_count', '50000+')
+    validity = request.form.get('validity', '180 days')
     image_url = request.form.get('image_url')
     demo_video_urls = request.form.get('demo_video_urls', '')
-    demo_instructions = request.form.get('demo_instructions')
+    demo_instructions = request.form.get('demo_instructions', 'You will get the Telegram channel link where all premium videos will be available.')
     enabled = True if request.form.get('enabled') == 'on' else False
     
     if plan_id:
@@ -329,12 +373,17 @@ BASE_HEAD = """
         .glass-card { background: rgba(24, 8, 52, 0.65); backdrop-filter: blur(12px); border: 1px solid rgba(168, 85, 247, 0.15); }
         .glow-effect { box-shadow: 0 0 30px rgba(168, 85, 247, 0.22); }
         .glow-blue { box-shadow: 0 0 30px rgba(59, 130, 246, 0.22); }
+        
+        @keyframes shine {
+            0% { transform: translateX(-100%); }
+            20% { transform: translateX(100%); }
+            100% { transform: translateX(100%); }
+        }
         .shiny-btn { background: linear-gradient(135deg, #9333ea 0%, #4f46e5 100%); position: relative; overflow: hidden; transition: all 0.3s ease; }
-        .shiny-btn::after { content: ''; position: absolute; top: -50%; left: -50%; width: 200%; height: 200%; background: linear-gradient(60deg, transparent, rgba(255,255,255,0.15), transparent); transform: rotate(30deg) translateX(-100%); transition: transform 0.7s ease-in-out; }
-        .shiny-btn:hover::after { transform: rotate(30deg) translateX(100%); }
+        .shiny-btn::after { content: ''; position: absolute; top: 0; left: -100%; width: 100%; height: 100%; background: linear-gradient(90deg, transparent, rgba(255,255,255,0.4), transparent); animation: shine 3s infinite; }
+        
         .shiny-red-btn { background: linear-gradient(135deg, #dc2626 0%, #b91c1c 100%); position: relative; overflow: hidden; transition: all 0.3s ease; }
-        .shiny-red-btn::after { content: ''; position: absolute; top: -50%; left: -50%; width: 200%; height: 200%; background: linear-gradient(60deg, transparent, rgba(255,255,255,0.18), transparent); transform: rotate(30deg) translateX(-100%); transition: transform 0.7s ease-in-out; }
-        .shiny-red-btn:hover::after { transform: rotate(30deg) translateX(100%); }
+        .shiny-red-btn::after { content: ''; position: absolute; top: 0; left: -100%; width: 100%; height: 100%; background: linear-gradient(90deg, transparent, rgba(255,255,255,0.4), transparent); animation: shine 3s infinite; }
     </style>
 </head>
 <body class="min-h-screen flex flex-col antialiased selection:bg-purple-500 selection:text-white">
@@ -360,15 +409,15 @@ BASE_HEAD = """
 """
 
 INDEX_HTML = BASE_HEAD.replace('{% block content %}{% endblock %}', """
-<section class="py-12 md:py-16 px-4 text-center">
-    <div class="max-w-4xl mx-auto space-y-4">
+<section class="py-10 md:py-14 px-4 text-center">
+    <div class="max-w-4xl mx-auto space-y-3">
         <span class="inline-flex items-center gap-1.5 px-4 py-1.5 rounded-full text-xs font-bold uppercase tracking-wider bg-purple-950 text-purple-300 border border-purple-500/30 shadow-inner">
             <i class="fa-solid fa-bolt text-amber-400"></i> Premium Learning Platform
         </span>
         <h1 class="text-3xl sm:text-4xl md:text-6xl font-black tracking-tight bg-gradient-to-r from-white via-purple-200 to-blue-300 bg-clip-text text-transparent px-2">
             {{ settings.site_name }}
         </h1>
-        <p class="text-sm md:text-lg text-purple-200/70 max-w-2xl mx-auto px-4">
+        <p class="text-sm md:text-base text-purple-200/70 max-w-2xl mx-auto px-4">
             {{ settings.site_caption }}
         </p>
     </div>
@@ -378,40 +427,45 @@ INDEX_HTML = BASE_HEAD.replace('{% block content %}{% endblock %}', """
     <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6 md:gap-8">
         {% for plan in plans %}
         <div class="glass-card rounded-3xl overflow-hidden border border-purple-900/50 hover:border-purple-500/50 transition duration-300 flex flex-col group shadow-xl">
-            <!-- 100% Un-cropped Image Frame with Flipkart/Amazon Style Offer Badge -->
+            <!-- Un-cropped Image Frame with Special Offer & 70% Off Badge -->
             <div class="relative w-full h-56 sm:h-60 bg-black/90 flex items-center justify-center p-3 overflow-hidden border-b border-purple-950">
                 <img src="{{ plan.image_url }}" alt="{{ plan.title }}" class="w-full h-full object-contain group-hover:scale-105 transition duration-500 drop-shadow-md" onerror="this.src='https://images.unsplash.com/photo-1618005182384-a83a8bd57fbe?w=600'">
                 
-                <!-- Flipkart / Amazon style "Special Offer" Badge -->
                 <div class="absolute top-3 left-3 bg-gradient-to-r from-amber-500 to-orange-600 text-white text-[10px] font-black uppercase px-2.5 py-1 rounded-lg shadow-lg tracking-wider flex items-center gap-1">
-                    <i class="fa-solid fa-tag"></i> Special Offer
+                    <i class="fa-solid fa-tag"></i> 70% OFF
                 </div>
 
                 <div class="absolute top-3 right-3 bg-purple-950/90 backdrop-blur-md px-3 py-1 rounded-full text-xs font-semibold text-purple-200 border border-purple-500/30">
-                    <i class="fa-solid fa-video text-purple-400 mr-1"></i> {{ plan.videos_count }} Videos
+                    <i class="fa-solid fa-video text-purple-400 mr-1"></i> {{ plan.videos_count }}
                 </div>
             </div>
 
             <!-- Content Area -->
             <div class="p-5 sm:p-6 flex flex-col flex-grow">
                 <h3 class="text-lg sm:text-xl font-black text-white group-hover:text-purple-300 transition line-clamp-1">{{ plan.title }}</h3>
-                <p class="mt-2 text-xs sm:text-sm text-purple-200/70 flex-grow line-clamp-2 leading-relaxed">{{ plan.description }}</p>
+                <div class="mt-2 text-xs sm:text-sm text-purple-200/70 flex-grow line-clamp-3 leading-relaxed whitespace-pre-line">{{ plan.description }}</div>
                 
-                <!-- Pricing Section with Original Strikethrough Price -->
-                <div class="mt-4 mb-5 flex items-center justify-between border-t border-purple-900/40 pt-4">
+                <!-- Telegram Channel Info Box -->
+                <div class="mt-3 p-2.5 rounded-xl bg-blue-950/40 border border-blue-500/30 text-[11px] text-blue-200 flex items-center gap-2">
+                    <i class="fa-brands fa-telegram text-blue-400 text-base shrink-0"></i>
+                    <span>You will get the Telegram channel link where all premium videos will be available.</span>
+                </div>
+
+                <!-- Pricing Section -->
+                <div class="mt-4 mb-4 flex items-center justify-between border-t border-purple-900/40 pt-3">
                     <div>
-                        <span class="text-[11px] text-purple-400 font-bold uppercase tracking-wider block">Limited Deal</span>
+                        <span class="text-[10px] text-purple-400 font-bold uppercase tracking-wider block">Special Price</span>
                         <div class="flex items-center gap-2 mt-0.5">
                             <span class="text-2xl font-black text-white">₹{{ plan.price }}</span>
                             <span class="text-xs text-purple-400/60 line-through font-semibold">₹{{ plan.original_price }}</span>
                         </div>
                     </div>
                     <span class="px-2.5 py-1 rounded-lg bg-emerald-950/80 text-emerald-400 text-xs font-bold border border-emerald-500/30">
-                        Save {{ ((plan.original_price - plan.price) / plan.original_price * 100) | round(0) | int }}%
+                        Validity: {{ plan.validity }}
                     </span>
                 </div>
 
-                <!-- Vertically Stacked Buttons: View Demo (Red Top) & Buy Now (Gradient Bottom) -->
+                <!-- Stacked Buttons: View Demo (Red Top) & Buy Now (Gradient Bottom) with Shining Animation -->
                 <div class="flex flex-col gap-2.5 mt-auto">
                     <a href="/demo/{{ plan.id }}" class="w-full py-3.5 rounded-xl shiny-red-btn text-white text-center text-xs sm:text-sm font-bold shadow-lg flex items-center justify-center gap-2 tracking-wide">
                         <i class="fa-solid fa-circle-play text-sm"></i> VIEW DEMO & DETAILS
@@ -434,31 +488,37 @@ DEMO_HTML = BASE_HEAD.replace('{% block content %}{% endblock %}', """
     </a>
     <div class="glass rounded-3xl p-5 sm:p-8 md:p-10 border border-purple-900/50 glow-effect flex flex-col gap-8 shadow-2xl">
         
-        <!-- Main Thumbnail Frame (100% Un-cropped) -->
+        <!-- Main Thumbnail Frame (Un-cropped) -->
         <div class="w-full rounded-2xl overflow-hidden border border-purple-500/30 h-72 sm:h-96 bg-black/90 flex items-center justify-center p-3 relative">
             <img src="{{ plan.image_url }}" alt="{{ plan.title }}" class="w-full h-full object-contain drop-shadow-2xl" onerror="this.src='https://images.unsplash.com/photo-1618005182384-a83a8bd57fbe?w=800'">
             <div class="absolute top-4 left-4 bg-gradient-to-r from-amber-500 to-orange-600 text-white text-xs font-black uppercase px-3 py-1.5 rounded-xl shadow-lg">
-                <i class="fa-solid fa-tag mr-1"></i> Best Seller Deal
+                <i class="fa-solid fa-tag mr-1"></i> 70% OFF Deal
             </div>
         </div>
 
         <!-- Structured Plan Details Box -->
         <div class="glass-card p-5 sm:p-6 rounded-2xl border border-purple-500/30 space-y-4">
             <h1 class="text-2xl sm:text-3xl font-black text-white leading-tight">{{ plan.title }}</h1>
-            <p class="text-purple-200/80 text-xs sm:text-sm leading-relaxed">{{ plan.description }}</p>
+            <div class="text-purple-200/80 text-xs sm:text-sm leading-relaxed whitespace-pre-line">{{ plan.description }}</div>
             
+            <!-- Telegram Channel Notice Box -->
+            <div class="p-3 rounded-xl bg-blue-950/50 border border-blue-500/30 text-xs text-blue-200 flex items-center gap-3">
+                <i class="fa-brands fa-telegram text-blue-400 text-xl shrink-0"></i>
+                <span>You will get the Telegram channel link where all premium videos will be available.</span>
+            </div>
+
             <div class="grid grid-cols-1 sm:grid-cols-3 gap-3 pt-4 border-t border-purple-900/50 text-xs sm:text-sm">
-                <div class="flex flex-col bg-purple-950/50 p-3 rounded-xl border border-purple-900/40">
-                    <span class="text-purple-400 text-[10px] font-bold uppercase tracking-wider">Course Plan</span>
-                    <span class="text-white font-bold truncate mt-0.5">{{ plan.title }}</span>
-                </div>
                 <div class="flex flex-col bg-purple-950/50 p-3 rounded-xl border border-purple-900/40">
                     <span class="text-purple-400 text-[10px] font-bold uppercase tracking-wider">Total Videos</span>
                     <span class="text-white font-bold mt-0.5">{{ plan.videos_count }} HD Lessons</span>
                 </div>
                 <div class="flex flex-col bg-purple-950/50 p-3 rounded-xl border border-purple-900/40">
                     <span class="text-purple-400 text-[10px] font-bold uppercase tracking-wider">Validity</span>
-                    <span class="text-emerald-400 font-bold mt-0.5 flex items-center gap-1"><i class="fa-solid fa-infinity"></i> {{ plan.validity }}</span>
+                    <span class="text-emerald-400 font-bold mt-0.5 flex items-center gap-1"><i class="fa-solid fa-calendar-days"></i> {{ plan.validity }}</span>
+                </div>
+                <div class="flex flex-col bg-purple-950/50 p-3 rounded-xl border border-purple-900/40">
+                    <span class="text-purple-400 text-[10px] font-bold uppercase tracking-wider">Access Type</span>
+                    <span class="text-blue-400 font-bold mt-0.5">Instant Delivery</span>
                 </div>
             </div>
 
@@ -471,7 +531,7 @@ DEMO_HTML = BASE_HEAD.replace('{% block content %}{% endblock %}', """
                     </div>
                 </div>
                 <span class="px-3 py-1 rounded-xl bg-emerald-950 text-emerald-400 text-xs font-black border border-emerald-500/30">
-                    You Save ₹{{ plan.original_price - plan.price }}
+                    Save ₹{{ plan.original_price - plan.price }}
                 </span>
             </div>
         </div>
@@ -505,7 +565,7 @@ DEMO_HTML = BASE_HEAD.replace('{% block content %}{% endblock %}', """
             <div class="text-xs sm:text-sm text-purple-200/80 whitespace-pre-line leading-relaxed">{{ plan.demo_instructions }}</div>
         </div>
 
-        <!-- Vertically Stacked Action Buttons -->
+        <!-- Vertically Stacked Action Buttons with Shining Animation -->
         <div class="pt-4 border-t border-purple-900/40 flex flex-col gap-3.5">
             <a href="{{ plan.telegram_url }}" target="_blank" class="w-full py-4 rounded-2xl shiny-red-btn text-white text-center font-bold text-sm sm:text-base shadow-xl flex items-center justify-center gap-2">
                 <i class="fa-solid fa-headset text-lg"></i> Contact Support / Telegram Demo
@@ -634,7 +694,7 @@ ADMIN_LOGIN_HTML = BASE_HEAD.replace('{% block content %}{% endblock %}', """
 """)
 
 ADMIN_DASHBOARD_HTML = BASE_HEAD.replace('{% block content %}{% endblock %}', """
-<div class="max-w-7xl mx-auto px-4 py-8">
+<div class="max-w-7xl mx-auto px-4 py-8 overflow-hidden">
     <div class="flex flex-col md:flex-row items-start md:items-center justify-between gap-4 mb-8">
         <div>
             <h1 class="text-2xl sm:text-3xl font-black text-white">Admin Dashboard</h1>
@@ -746,11 +806,11 @@ ADMIN_DASHBOARD_HTML = BASE_HEAD.replace('{% block content %}{% endblock %}', ""
                 </div>
                 <div class="p-4 sm:p-5 flex flex-col flex-grow">
                     <h3 class="font-bold text-white text-base truncate">{{ plan.title }}</h3>
-                    <p class="text-xs text-purple-300/70 mt-1 flex-grow line-clamp-2">{{ plan.description }}</p>
+                    <div class="text-xs text-purple-300/70 mt-1 flex-grow line-clamp-2 whitespace-pre-line">{{ plan.description }}</div>
                     <div class="mt-4 pt-3 border-t border-purple-900/50 flex items-center justify-between">
                         <span class="text-xs {% if plan.enabled %}text-emerald-400{% else %}text-red-400{% endif %} font-semibold">● {% if plan.enabled %}Active{% else %}Disabled{% endif %}</span>
                         <div class="flex gap-2">
-                            <button onclick='editPlan({{ {"id": plan.id, "title": plan.title, "description": plan.description, "price": plan.price, "original_price": plan.original_price, "videos_count": plan.videos_count, "validity": plan.validity, "image_url": plan.image_url, "demo_video_urls": plan.demo_video_urls or "", "telegram_url": plan.telegram_url, "demo_instructions": plan.demo_instructions, "enabled": plan.enabled}|tojson|safe }})' class="px-3 py-1.5 rounded-lg bg-purple-800 hover:bg-purple-700 text-white text-xs font-bold transition">Edit</button>
+                            <button onclick='editPlan({{ {"id": plan.id, "title": plan.title, "description": plan.description, "price": plan.price, "videos_count": plan.videos_count, "validity": plan.validity, "image_url": plan.image_url, "demo_video_urls": plan.demo_video_urls or "", "telegram_url": plan.telegram_url, "demo_instructions": plan.demo_instructions, "enabled": plan.enabled}|tojson|safe }})' class="px-3 py-1.5 rounded-lg bg-purple-800 hover:bg-purple-700 text-white text-xs font-bold transition">Edit</button>
                             <a href="/admin/plan/delete/{{ plan.id }}" onclick="return confirm('Delete this plan?');" class="px-3 py-1.5 rounded-lg bg-red-950 hover:bg-red-900 text-red-200 text-xs font-bold transition">Delete</a>
                         </div>
                     </div>
@@ -806,66 +866,63 @@ ADMIN_DASHBOARD_HTML = BASE_HEAD.replace('{% block content %}{% endblock %}', ""
     </div>
 </div>
 
-<div id="plan-modal" class="fixed inset-0 z-50 hidden bg-black/80 backdrop-blur-md flex items-center justify-center p-4 overflow-y-auto">
-    <div class="glass max-w-xl w-full rounded-3xl p-6 sm:p-8 border border-purple-900/50 my-8">
-        <div class="flex justify-between items-center mb-6">
+<!-- Plan Modal (Fixed Overflow & Screen Fit) -->
+<div id="plan-modal" class="fixed inset-0 z-50 hidden bg-black/80 backdrop-blur-md flex items-center justify-center p-2 sm:p-4 overflow-y-auto">
+    <div class="glass max-w-xl w-full rounded-3xl p-5 sm:p-8 border border-purple-900/50 my-6 max-h-[90vh] overflow-y-auto">
+        <div class="flex justify-between items-center mb-4">
             <h3 id="modal-title" class="text-lg sm:text-xl font-bold text-white">Add New Course Plan</h3>
             <button onclick="closePlanModal()" class="text-purple-400 hover:text-white text-xl"><i class="fa-solid fa-xmark"></i></button>
         </div>
-        <form action="/admin/plan/save" method="POST" class="space-y-4">
+        <form action="/admin/plan/save" method="POST" class="space-y-3.5">
             <input type="hidden" name="plan_id" id="modal_plan_id">
             <div>
-                <label class="block text-xs font-bold uppercase tracking-wider text-purple-300 mb-1">Course Title</label>
-                <input type="text" name="title" id="modal_title" required class="w-full px-4 py-2.5 rounded-xl bg-purple-950/60 border border-purple-500/30 text-white text-sm">
+                <label class="block text-[11px] font-bold uppercase tracking-wider text-purple-300 mb-1">Course Title</label>
+                <input type="text" name="title" id="modal_title" required class="w-full px-3.5 py-2.5 rounded-xl bg-purple-950/60 border border-purple-500/30 text-white text-sm">
             </div>
-            <div class="grid grid-cols-2 sm:grid-cols-4 gap-3">
+            <div class="grid grid-cols-2 sm:grid-cols-3 gap-2.5">
                 <div>
-                    <label class="block text-xs font-bold uppercase tracking-wider text-purple-300 mb-1">Offer Price (₹)</label>
-                    <input type="number" name="price" id="modal_price" required class="w-full px-3 py-2.5 rounded-xl bg-purple-950/60 border border-purple-500/30 text-white text-sm">
+                    <label class="block text-[11px] font-bold uppercase tracking-wider text-purple-300 mb-1">Price (₹)</label>
+                    <input type="number" name="price" id="modal_price" required class="w-full px-3 py-2 rounded-xl bg-purple-950/60 border border-purple-500/30 text-white text-sm">
                 </div>
                 <div>
-                    <label class="block text-xs font-bold uppercase tracking-wider text-purple-300 mb-1">Original (₹)</label>
-                    <input type="number" name="original_price" id="modal_orig_price" required class="w-full px-3 py-2.5 rounded-xl bg-purple-950/60 border border-purple-500/30 text-white text-sm">
+                    <label class="block text-[11px] font-bold uppercase tracking-wider text-purple-300 mb-1">Videos</label>
+                    <input type="text" name="videos_count" id="modal_videos" required class="w-full px-3 py-2 rounded-xl bg-purple-950/60 border border-purple-500/30 text-white text-sm">
                 </div>
                 <div>
-                    <label class="block text-xs font-bold uppercase tracking-wider text-purple-300 mb-1">Videos</label>
-                    <input type="number" name="videos_count" id="modal_videos" required class="w-full px-3 py-2.5 rounded-xl bg-purple-950/60 border border-purple-500/30 text-white text-sm">
-                </div>
-                <div>
-                    <label class="block text-xs font-bold uppercase tracking-wider text-purple-300 mb-1">Validity</label>
-                    <input type="text" name="validity" id="modal_validity" value="Lifetime Access" required class="w-full px-3 py-2.5 rounded-xl bg-purple-950/60 border border-purple-500/30 text-white text-sm">
+                    <label class="block text-[11px] font-bold uppercase tracking-wider text-purple-300 mb-1">Validity</label>
+                    <input type="text" name="validity" id="modal_validity" value="180 days" required class="w-full px-3 py-2 rounded-xl bg-purple-950/60 border border-purple-500/30 text-white text-sm">
                 </div>
             </div>
             <div>
-                <label class="block text-xs font-bold uppercase tracking-wider text-purple-300 mb-1">Thumbnail Image URL</label>
-                <input type="text" name="image_url" id="modal_image_url" oninput="updatePreview('modal_image_url', 'modal_img_preview')" required class="w-full px-4 py-2.5 rounded-xl bg-purple-950/60 border border-purple-500/30 text-white text-sm">
-                <div class="mt-3 w-full h-32 rounded-xl overflow-hidden border border-purple-500/30 bg-black/90 flex items-center justify-center p-2">
+                <label class="block text-[11px] font-bold uppercase tracking-wider text-purple-300 mb-1">Thumbnail Image URL</label>
+                <input type="text" name="image_url" id="modal_image_url" oninput="updatePreview('modal_image_url', 'modal_img_preview')" required class="w-full px-3.5 py-2.5 rounded-xl bg-purple-950/60 border border-purple-500/30 text-white text-sm">
+                <div class="mt-2 w-full h-28 rounded-xl overflow-hidden border border-purple-500/30 bg-black/90 flex items-center justify-center p-2">
                     <img id="modal_img_preview" src="" alt="Preview" class="w-full h-full object-contain" onerror="this.src='https://images.unsplash.com/photo-1618005182384-a83a8bd57fbe?w=400'">
                 </div>
             </div>
             <div>
-                <label class="block text-xs font-bold uppercase tracking-wider text-purple-300 mb-1">Demo Video URLs (Comma Separated)</label>
-                <input type="text" name="demo_video_urls" id="modal_demo_video_urls" placeholder="https://..., https://..." class="w-full px-4 py-2.5 rounded-xl bg-purple-950/60 border border-purple-500/30 text-white text-xs font-mono">
+                <label class="block text-[11px] font-bold uppercase tracking-wider text-purple-300 mb-1">Demo Video URLs (Comma Separated)</label>
+                <input type="text" name="demo_video_urls" id="modal_demo_video_urls" placeholder="https://..., https://..." class="w-full px-3.5 py-2.5 rounded-xl bg-purple-950/60 border border-purple-500/30 text-white text-xs font-mono">
             </div>
             <div>
-                <label class="block text-xs font-bold uppercase tracking-wider text-purple-300 mb-1">Support Link</label>
-                <input type="text" name="telegram_url" id="modal_telegram" required class="w-full px-4 py-2.5 rounded-xl bg-purple-950/60 border border-purple-500/30 text-white text-sm">
+                <label class="block text-[11px] font-bold uppercase tracking-wider text-purple-300 mb-1">Support Link</label>
+                <input type="text" name="telegram_url" id="modal_telegram" required class="w-full px-3.5 py-2.5 rounded-xl bg-purple-950/60 border border-purple-500/30 text-white text-sm">
             </div>
             <div>
-                <label class="block text-xs font-bold uppercase tracking-wider text-purple-300 mb-1">Description</label>
-                <textarea name="description" id="modal_desc" rows="3" required class="w-full px-4 py-2.5 rounded-xl bg-purple-950/60 border border-purple-500/30 text-white text-sm"></textarea>
+                <label class="block text-[11px] font-bold uppercase tracking-wider text-purple-300 mb-1">Caption / Description</label>
+                <textarea name="description" id="modal_desc" rows="3" required class="w-full px-3.5 py-2.5 rounded-xl bg-purple-950/60 border border-purple-500/30 text-white text-sm"></textarea>
             </div>
             <div>
-                <label class="block text-xs font-bold uppercase tracking-wider text-purple-300 mb-1">Instructions</label>
-                <textarea name="demo_instructions" id="modal_instructions" rows="2" required class="w-full px-4 py-2.5 rounded-xl bg-purple-950/60 border border-purple-500/30 text-white text-sm"></textarea>
+                <label class="block text-[11px] font-bold uppercase tracking-wider text-purple-300 mb-1">Instructions</label>
+                <textarea name="demo_instructions" id="modal_instructions" rows="2" required class="w-full px-3.5 py-2.5 rounded-xl bg-purple-950/60 border border-purple-500/30 text-white text-sm"></textarea>
             </div>
-            <div class="flex items-center gap-3 pt-2">
-                <input type="checkbox" name="enabled" id="modal_enabled" checked class="w-5 h-5 accent-purple-600 rounded">
-                <label class="text-sm font-semibold text-purple-200">Enable this plan on homepage</label>
+            <div class="flex items-center gap-2.5 pt-1">
+                <input type="checkbox" name="enabled" id="modal_enabled" checked class="w-4 h-4 accent-purple-600 rounded">
+                <label class="text-xs font-semibold text-purple-200">Enable this plan on homepage</label>
             </div>
-            <div class="pt-4 flex gap-3">
+            <div class="pt-3 flex gap-2.5">
                 <button type="submit" class="flex-1 py-3 rounded-xl shiny-btn text-white font-bold text-sm transition">Save Plan</button>
-                <button type="button" onclick="closePlanModal()" class="px-6 py-3 rounded-xl bg-purple-950 hover:bg-purple-900 text-purple-300 font-bold text-sm transition">Cancel</button>
+                <button type="button" onclick="closePlanModal()" class="px-5 py-3 rounded-xl bg-purple-950 hover:bg-purple-900 text-purple-300 font-bold text-sm transition">Cancel</button>
             </div>
         </form>
     </div>
@@ -891,16 +948,15 @@ function openPlanModal() {
     document.getElementById('modal-title').innerText = 'Add New Course Plan';
     document.getElementById('modal_plan_id').value = '';
     document.getElementById('modal_title').value = '';
-    document.getElementById('modal_price').value = '199';
-    document.getElementById('modal_orig_price').value = '999';
-    document.getElementById('modal_videos').value = '25';
-    document.getElementById('modal_validity').value = 'Lifetime Access';
+    document.getElementById('modal_price').value = '49';
+    document.getElementById('modal_videos').value = '50000+';
+    document.getElementById('modal_validity').value = '180 days';
     document.getElementById('modal_image_url').value = '';
     document.getElementById('modal_demo_video_urls').value = '';
     document.getElementById('modal_img_preview').src = '';
     document.getElementById('modal_telegram').value = 'https://t.me/NexusSupportBot';
-    document.getElementById('modal_desc').value = '';
-    document.getElementById('modal_instructions').value = '1. Neeche scroll karke saare demo videos dekhein\\n2. Stream smoothly without any lag\\n3. Click Buy Now to join full course';
+    document.getElementById('modal_desc').value = '1. 𝙔𝙊𝙐 𝘾𝘼𝙉 𝙎𝘼𝙑𝙀 𝙄𝙉 𝙂𝘼𝙇𝙇𝙀𝙍𝙔 ✅\\n2. 𝙉𝙊 𝘼𝙉𝙔 𝘼𝘿𝙎 ❌\\n3. 𝙃𝙄𝙂𝙃 𝙌𝙐𝘼𝙇𝙄𝙏𝙔 𝙑𝙄𝘿𝙀𝙊𝙎 😍\\n4. 𝙉𝙀𝙒 𝙑𝙄𝘿𝙀𝙊𝙎 𝙐𝙋𝙇𝙊𝘼𝘿𝙀𝘿 𝙀𝙑𝙀𝙍𝙔 𝙎𝙐𝙉𝘿𝘼𝙔 ✅';
+    document.getElementById('modal_instructions').value = 'You will get the Telegram channel link where all premium videos will be available.';
     document.getElementById('modal_enabled').checked = true;
     document.getElementById('plan-modal').classList.remove('hidden');
 }
@@ -909,9 +965,8 @@ function editPlan(plan) {
     document.getElementById('modal_plan_id').value = plan.id;
     document.getElementById('modal_title').value = plan.title;
     document.getElementById('modal_price').value = plan.price;
-    document.getElementById('modal_orig_price').value = plan.original_price || 999;
     document.getElementById('modal_videos').value = plan.videos_count;
-    document.getElementById('modal_validity').value = plan.validity || 'Lifetime Access';
+    document.getElementById('modal_validity').value = plan.validity || '180 days';
     document.getElementById('modal_image_url').value = plan.image_url;
     document.getElementById('modal_demo_video_urls').value = plan.demo_video_urls || '';
     document.getElementById('modal_img_preview').src = plan.image_url;
