@@ -36,6 +36,7 @@ class Plan(db.Model):
     description = db.Column(db.Text, nullable=False)
     price = db.Column(db.Integer, nullable=False, default=199)
     videos_count = db.Column(db.Integer, nullable=False, default=25)
+    validity = db.Column(db.String(100), nullable=False, default="Lifetime Access")
     image_url = db.Column(db.String(500), nullable=False)
     demo_video_urls = db.Column(db.Text, nullable=True)
     telegram_url = db.Column(db.String(500), default="https://t.me/NexusSupportBot")
@@ -84,19 +85,19 @@ with app.app_context():
             
     if Plan.query.count() == 0:
         initial_plans = [
-            ("Python Mastery & Backend Pro", "Build robust backend applications, APIs, and automated systems with Python.", 199, 30, "https://i.ibb.co/Fb6S1mYg/course1.jpg", "https://www.w3schools.com/html/mov_bbb.mp4,https://www.w3schools.com/html/mov_bbb.mp4"),
-            ("Full Stack Web Development Bootcamp", "Master HTML, CSS, JavaScript, React, and Node.js from scratch.", 299, 45, "https://i.ibb.co/ZRqKVvRQ/course2.jpg", "https://www.w3schools.com/html/mov_bbb.mp4"),
-            ("Advanced React & Next.js Masterclass", "Build lightning-fast, SEO-optimized web applications with modern React.", 249, 28, "https://i.ibb.co/21H7BGM2/course3.jpg", ""),
-            ("Data Science & Machine Learning Pro", "Analyze complex datasets and build predictive AI models using Python.", 399, 50, "https://i.ibb.co/QF2v05qK/course4.jpg", ""),
-            ("Cybersecurity & Ethical Hacking 2026", "Learn penetration testing, network security, and vulnerability assessment.", 349, 35, "https://i.ibb.co/5X0hc5dd/course5.jpg", ""),
-            ("UI/UX Design Master Course", "Design stunning user interfaces and seamless experiences in Figma.", 199, 22, "https://i.ibb.co/HLw36KQ4/course6.jpg", ""),
-            ("Android & iOS App Development", "Create cross-platform mobile applications using Flutter and React Native.", 299, 40, "https://i.ibb.co/9kKCd6ZF/course7.jpg", ""),
-            ("Cloud Computing & AWS DevOps", "Master cloud infrastructure, Docker, Kubernetes, and CI/CD pipelines.", 449, 38, "https://i.ibb.co/C5KZBm7f/course8.jpg", ""),
-            ("AI & Generative Prompt Engineering", "Leverage LLMs, AI agents, and prompt frameworks to supercharge productivity.", 199, 20, "https://i.ibb.co/qFhKnzcH/course9.jpg", ""),
-            ("Digital Marketing & Growth Hacking", "Scale brands, run high-converting ad campaigns, and master SEO.", 199, 25, "https://i.ibb.co/84598K8j/course10.jpg", "")
+            ("Python Mastery & Backend Pro", "Build robust backend applications, APIs, and automated systems with Python.", 199, 30, "Lifetime Access", "https://i.ibb.co/Fb6S1mYg/course1.jpg", "https://www.w3schools.com/html/mov_bbb.mp4,https://www.w3schools.com/html/mov_bbb.mp4"),
+            ("Full Stack Web Development Bootcamp", "Master HTML, CSS, JavaScript, React, and Node.js from scratch.", 299, 45, "Lifetime Access", "https://i.ibb.co/ZRqKVvRQ/course2.jpg", "https://www.w3schools.com/html/mov_bbb.mp4"),
+            ("Advanced React & Next.js Masterclass", "Build lightning-fast, SEO-optimized web applications with modern React.", 249, 28, "Lifetime Access", "https://i.ibb.co/21H7BGM2/course3.jpg", ""),
+            ("Data Science & Machine Learning Pro", "Analyze complex datasets and build predictive AI models using Python.", 399, 50, "Lifetime Access", "https://i.ibb.co/QF2v05qK/course4.jpg", ""),
+            ("Cybersecurity & Ethical Hacking 2026", "Learn penetration testing, network security, and vulnerability assessment.", 349, 35, "Lifetime Access", "https://i.ibb.co/5X0hc5dd/course5.jpg", ""),
+            ("UI/UX Design Master Course", "Design stunning user interfaces and seamless experiences in Figma.", 199, 22, "Lifetime Access", "https://i.ibb.co/HLw36KQ4/course6.jpg", ""),
+            ("Android & iOS App Development", "Create cross-platform mobile applications using Flutter and React Native.", 299, 40, "Lifetime Access", "https://i.ibb.co/9kKCd6ZF/course7.jpg", ""),
+            ("Cloud Computing & AWS DevOps", "Master cloud infrastructure, Docker, Kubernetes, and CI/CD pipelines.", 449, 38, "Lifetime Access", "https://i.ibb.co/C5KZBm7f/course8.jpg", ""),
+            ("AI & Generative Prompt Engineering", "Leverage LLMs, AI agents, and prompt frameworks to supercharge productivity.", 199, 20, "Lifetime Access", "https://i.ibb.co/qFhKnzcH/course9.jpg", ""),
+            ("Digital Marketing & Growth Hacking", "Scale brands, run high-converting ad campaigns, and master SEO.", 199, 25, "Lifetime Access", "https://i.ibb.co/84598K8j/course10.jpg", "")
         ]
-        for idx, (title, desc, price, vids, img, demo_vids) in enumerate(initial_plans):
-            p = Plan(title=title, description=desc, price=price, videos_count=vids, image_url=img, demo_video_urls=demo_vids, order_index=idx)
+        for idx, (title, desc, price, vids, val, img, demo_vids) in enumerate(initial_plans):
+            p = Plan(title=title, description=desc, price=price, videos_count=vids, validity=val, image_url=img, demo_video_urls=demo_vids, order_index=idx)
             db.session.add(p)
             
     if not Analytics.query.first():
@@ -160,7 +161,7 @@ def payment_page(plan_id):
         if 'screenshot' in request.files:
             file = request.files['screenshot']
             if file and file.filename != '':
-                upload_folder = os.path.join('static', 'uploads')
+                upload_folder = os.path.join('/tmp', 'uploads') if os.environ.get('VERCEL') else os.path.join('static', 'uploads')
                 os.makedirs(upload_folder, exist_ok=True)
                 filename = f"{order_id}_{file.filename}"
                 file.save(os.path.join(upload_folder, filename))
@@ -232,6 +233,7 @@ def admin_save_plan():
     description = request.form.get('description')
     price = int(request.form.get('price', 199))
     videos_count = int(request.form.get('videos_count', 25))
+    validity = request.form.get('validity', 'Lifetime Access')
     image_url = request.form.get('image_url')
     demo_video_urls = request.form.get('demo_video_urls', '')
     demo_instructions = request.form.get('demo_instructions')
@@ -243,6 +245,7 @@ def admin_save_plan():
         plan.description = description
         plan.price = price
         plan.videos_count = videos_count
+        plan.validity = validity
         plan.image_url = image_url
         plan.demo_video_urls = demo_video_urls
         plan.demo_instructions = demo_instructions
@@ -250,7 +253,7 @@ def admin_save_plan():
     else:
         max_order = db.session.query(db.func.max(Plan.order_index)).scalar() or 0
         new_plan = Plan(
-            title=title, description=description, price=price, videos_count=videos_count,
+            title=title, description=description, price=price, videos_count=videos_count, validity=validity,
             image_url=image_url, demo_video_urls=demo_video_urls, demo_instructions=demo_instructions,
             enabled=enabled, order_index=max_order + 1
         )
@@ -358,7 +361,8 @@ INDEX_HTML = BASE_HEAD.replace('{% block content %}{% endblock %}', """
     <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
         {% for plan in plans %}
         <div class="glass rounded-2xl overflow-hidden border border-purple-900/50 hover:border-purple-500/50 transition duration-300 flex flex-col group">
-            <div class="relative h-60 bg-black/60 flex items-center justify-center p-3">
+            <!-- Non-cropped image frame -->
+            <div class="relative w-full h-60 bg-black/80 flex items-center justify-center p-3">
                 <img src="{{ plan.image_url }}" alt="{{ plan.title }}" class="w-full h-full object-contain group-hover:scale-105 transition duration-500" onerror="this.src='https://images.unsplash.com/photo-1618005182384-a83a8bd57fbe?w=600'">
                 <div class="absolute top-3 right-3 bg-purple-900/90 backdrop-blur-md px-3 py-1 rounded-full text-xs font-semibold text-purple-200 border border-purple-500/30">
                     <i class="fa-solid fa-video mr-1"></i> {{ plan.videos_count }} Videos
@@ -367,15 +371,18 @@ INDEX_HTML = BASE_HEAD.replace('{% block content %}{% endblock %}', """
             <div class="p-6 flex flex-col flex-grow">
                 <h3 class="text-xl font-bold text-white group-hover:text-purple-300 transition">{{ plan.title }}</h3>
                 <p class="mt-2 text-sm text-purple-200/70 flex-grow line-clamp-2">{{ plan.description }}</p>
-                <div class="mt-6 pt-4 border-t border-purple-900/40 flex items-center justify-between">
-                    <div>
-                        <span class="text-xs text-purple-300/60 block">Price</span>
-                        <span class="text-2xl font-black text-white">₹{{ plan.price }}</span>
-                    </div>
-                    <div class="flex gap-2">
-                        <a href="/demo/{{ plan.id }}" class="px-3.5 py-2 rounded-xl bg-purple-950/80 hover:bg-purple-900 text-purple-200 text-sm font-semibold border border-purple-500/30 transition">View Demo</a>
-                        <a href="/payment/{{ plan.id }}" class="px-4 py-2 rounded-xl bg-gradient-to-r from-purple-600 to-blue-600 hover:from-purple-500 hover:to-blue-500 text-white text-sm font-bold shadow-lg glow-effect transition">Buy Now</a>
-                    </div>
+                <div class="mt-4 mb-4 flex items-center justify-between">
+                    <span class="text-xs text-purple-300/60 block">Price</span>
+                    <span class="text-2xl font-black text-white">₹{{ plan.price }}</span>
+                </div>
+                <!-- Stacked Buttons: View Demo Top (Red), Buy Now Bottom (Gradient) -->
+                <div class="flex flex-col gap-2.5">
+                    <a href="/demo/{{ plan.id }}" class="w-full py-3 rounded-xl bg-red-600 hover:bg-red-500 text-white text-center text-sm font-bold shadow-lg transition flex items-center justify-center gap-2">
+                        <i class="fa-solid fa-play-circle"></i> View Demo
+                    </a>
+                    <a href="/payment/{{ plan.id }}" class="w-full py-3 rounded-xl bg-gradient-to-r from-purple-600 to-blue-600 hover:from-purple-500 hover:to-blue-500 text-white text-center text-sm font-bold shadow-lg glow-effect transition">
+                        Buy Now (₹{{ plan.price }})
+                    </a>
                 </div>
             </div>
         </div>
@@ -391,24 +398,23 @@ DEMO_HTML = BASE_HEAD.replace('{% block content %}{% endblock %}', """
     </a>
     <div class="glass rounded-3xl p-6 md:p-10 border border-purple-900/50 glow-effect flex flex-col gap-8">
         
-        <!-- Main Thumbnail View without cropping -->
+        <!-- Main Thumbnail Frame (Un-cropped) -->
         <div class="w-full rounded-2xl overflow-hidden border border-purple-500/30 h-96 bg-black/80 flex items-center justify-center p-4">
             <img src="{{ plan.image_url }}" alt="{{ plan.title }}" class="w-full h-full object-contain drop-shadow-2xl" onerror="this.src='https://images.unsplash.com/photo-1618005182384-a83a8bd57fbe?w=800'">
         </div>
 
-        <div>
-            <span class="px-3 py-1 rounded-full text-xs font-bold uppercase bg-purple-900/60 text-purple-300 border border-purple-500/30">
-                <i class="fa-solid fa-video mr-1"></i> {{ plan.videos_count }} Videos Included
-            </span>
-            <h1 class="text-3xl font-black text-white mt-3">{{ plan.title }}</h1>
-            <p class="mt-3 text-purple-200/80 text-base leading-relaxed">{{ plan.description }}</p>
-            <div class="mt-6">
-                <span class="text-xs text-purple-300/60 block">Full Access Price</span>
-                <span class="text-4xl font-black text-white">₹{{ plan.price }}</span>
+        <!-- Plan Details Structured Heading Section -->
+        <div class="glass p-6 rounded-2xl border border-purple-500/30 space-y-3">
+            <h1 class="text-3xl font-black text-white">{{ plan.title }}</h1>
+            <p class="text-purple-200/80 text-sm leading-relaxed">{{ plan.description }}</p>
+            <div class="grid grid-cols-1 sm:grid-cols-3 gap-4 pt-3 border-t border-purple-900/50 text-sm">
+                <div class="flex flex-col"><span class="text-purple-400 text-xs font-bold uppercase">Plan</span><span class="text-white font-bold">{{ plan.title }}</span></div>
+                <div class="flex flex-col"><span class="text-purple-400 text-xs font-bold uppercase">Videos</span><span class="text-white font-bold">{{ plan.videos_count }} Lessons</span></div>
+                <div class="flex flex-col"><span class="text-purple-400 text-xs font-bold uppercase">Validity</span><span class="text-emerald-400 font-bold">{{ plan.validity }}</span></div>
             </div>
         </div>
 
-        <!-- Dynamic Demo Videos Stacked Vertically with original aspect ratio sizing -->
+        <!-- Dynamic Demo Videos Stacked Vertically -->
         {% if demo_list %}
         <div class="pt-6 border-t border-purple-900/40 flex flex-col gap-8">
             <h3 class="text-xl font-bold text-white flex items-center gap-2">
@@ -435,7 +441,7 @@ DEMO_HTML = BASE_HEAD.replace('{% block content %}{% endblock %}', """
             <div class="text-sm text-purple-200/80 whitespace-pre-line leading-relaxed">{{ plan.demo_instructions }}</div>
         </div>
 
-        <!-- Vertically Stacked Action Buttons with Red View Demo Button -->
+        <!-- Vertically Stacked Action Buttons -->
         <div class="pt-6 border-t border-purple-900/40 flex flex-col gap-4">
             <a href="{{ plan.telegram_url }}" target="_blank" class="w-full py-4 rounded-2xl bg-red-600 hover:bg-red-500 text-white text-center font-bold text-lg shadow-xl transition flex items-center justify-center gap-2">
                 <i class="fa-solid fa-headset"></i> Contact Support / Telegram Demo
@@ -453,7 +459,7 @@ PAYMENT_HTML = BASE_HEAD.replace('{% block content %}{% endblock %}', """
     <a href="/demo/{{ plan.id }}" class="inline-flex items-center gap-2 text-sm font-semibold text-purple-400 hover:text-purple-300 mb-6">
         <i class="fa-solid fa-arrow-left"></i> Back to Course
     </a>
-    <div class="glass rounded-3xl p-6 md:p-8 border border-purple-900/50 glow-effect">
+    <div class="glass rounded-3xl p-6 md:p-8 border border-purple-900/50 glow-effect relative">
         <div class="text-center pb-6 border-b border-purple-900/40">
             <span class="px-3 py-1 rounded-full text-xs font-bold uppercase bg-emerald-950 text-emerald-300 border border-emerald-500/30">
                 <i class="fa-solid fa-shield-halved mr-1"></i> SECURE UPI PAYMENT
@@ -476,7 +482,8 @@ PAYMENT_HTML = BASE_HEAD.replace('{% block content %}{% endblock %}', """
         <div class="mb-8 p-4 rounded-xl bg-purple-950/40 border border-purple-500/20 text-xs text-purple-300/80 leading-relaxed whitespace-pre-line">
             {{ settings.payment_instructions }}
         </div>
-        <form action="/payment/{{ plan.id }}" method="POST" enctype="multipart/form-data" class="space-y-6">
+        
+        <form id="payment-form" action="/payment/{{ plan.id }}" method="POST" enctype="multipart/form-data" class="space-y-6" onsubmit="showLoadingPopup()">
             <div>
                 <label class="block text-sm font-bold text-purple-200 mb-2">Enter Your 12-Digit UTR / Transaction Reference Number *</label>
                 <input type="text" name="utr" required placeholder="e.g. 432156789012" class="w-full px-4 py-3 rounded-xl bg-purple-950/60 border border-purple-500/30 text-white focus:outline-none focus:border-purple-500 transition font-mono">
@@ -491,23 +498,42 @@ PAYMENT_HTML = BASE_HEAD.replace('{% block content %}{% endblock %}', """
         </form>
     </div>
 </div>
+
+<!-- Glassmorphism Payment Submitting Popup -->
+<div id="payment-loading-popup" class="fixed inset-0 z-50 hidden bg-black/80 backdrop-blur-md flex items-center justify-center p-4">
+    <div class="glass max-w-sm w-full rounded-3xl p-8 border border-purple-500/30 text-center flex flex-col items-center gap-4 glow-effect">
+        <div class="w-16 h-16 border-4 border-purple-900 border-t-emerald-400 rounded-full animate-spin"></div>
+        <h3 class="text-xl font-bold text-white">Payment Submitting...</h3>
+        <p class="text-xs text-purple-300/80">Please wait while we verify and record your payment details.</p>
+    </div>
+</div>
+
+<script>
+function showLoadingPopup() {
+    document.getElementById('payment-loading-popup').classList.remove('hidden');
+}
+</script>
 """)
 
 SUCCESS_HTML = BASE_HEAD.replace('{% block content %}{% endblock %}', """
 <div class="max-w-xl mx-auto px-4 py-16 text-center">
     <div class="glass rounded-3xl p-8 border border-purple-900/50 glow-effect">
-        <div class="w-20 h-20 bg-emerald-500/20 border border-emerald-500/50 rounded-full flex items-center justify-center mx-auto text-emerald-400 text-3xl mb-6">
+        <!-- Big Green Tick Badge -->
+        <div class="w-20 h-20 bg-emerald-500/20 border-2 border-emerald-500 rounded-full flex items-center justify-center mx-auto text-emerald-400 text-4xl mb-6 shadow-xl">
             <i class="fa-solid fa-check"></i>
         </div>
-        <h1 class="text-2xl font-black text-white">Payment Details Submitted!</h1>
-        <p class="text-purple-300/80 text-sm mt-2">Your payment details have been recorded and sent to the admin via Telegram.</p>
-        <div class="my-6 p-4 rounded-2xl bg-purple-950/60 border border-purple-500/30 text-left space-y-2 text-sm">
-            <div class="flex justify-between"><span class="text-purple-400">Order ID:</span> <span class="font-mono text-white">{{ order.order_id }}</span></div>
-            <div class="flex justify-between"><span class="text-purple-400">Course:</span> <span class="text-white font-bold">{{ order.course_name }}</span></div>
-            <div class="flex justify-between"><span class="text-purple-400">Amount:</span> <span class="text-white font-bold">₹{{ order.amount }}</span></div>
-            <div class="flex justify-between"><span class="text-purple-400">UTR Number:</span> <span class="font-mono text-white">{{ order.utr }}</span></div>
-            <div class="flex justify-between"><span class="text-purple-400">Status:</span> <span class="px-2 py-0.5 rounded-full text-xs font-bold bg-amber-950 text-amber-300 border border-amber-500/30">{{ order.status }}</span></div>
+        <h1 class="text-2xl font-black text-white">Payment Submitted!</h1>
+        <p class="text-purple-300/80 text-sm mt-2">Your payment details and screenshot have been recorded successfully.</p>
+        
+        <!-- Plan & Order Details -->
+        <div class="my-6 p-5 rounded-2xl bg-purple-950/60 border border-purple-500/30 text-left space-y-3 text-sm">
+            <div class="flex justify-between border-b border-purple-900/40 pb-2"><span class="text-purple-400 font-semibold">Order ID:</span> <span class="font-mono text-white font-bold">{{ order.order_id }}</span></div>
+            <div class="flex justify-between border-b border-purple-900/40 pb-2"><span class="text-purple-400 font-semibold">Course / Plan:</span> <span class="text-white font-bold">{{ order.course_name }}</span></div>
+            <div class="flex justify-between border-b border-purple-900/40 pb-2"><span class="text-purple-400 font-semibold">Amount Paid:</span> <span class="text-white font-bold">₹{{ order.amount }}</span></div>
+            <div class="flex justify-between border-b border-purple-900/40 pb-2"><span class="text-purple-400 font-semibold">UTR Number:</span> <span class="font-mono text-white">{{ order.utr }}</span></div>
+            <div class="flex justify-between"><span class="text-purple-400 font-semibold">Status:</span> <span class="px-3 py-1 rounded-full text-xs font-bold bg-amber-950 text-amber-300 border border-amber-500/30">{{ order.status }}</span></div>
         </div>
+        
         <a href="/" class="inline-block px-8 py-3.5 rounded-xl bg-purple-900 hover:bg-purple-800 text-white font-bold text-sm border border-purple-500/30 transition">
             Return to Homepage
         </a>
@@ -523,7 +549,6 @@ ADMIN_LOGIN_HTML = BASE_HEAD.replace('{% block content %}{% endblock %}', """
                 <i class="fa-solid fa-lock"></i>
             </div>
             <h1 class="text-2xl font-black text-white">Admin Login</h1>
-            <p class="text-purple-300/70 text-xs mt-1">Username: arushdev | Password: arush300</p>
         </div>
         <form action="/admin/login" method="POST" class="space-y-6">
             <div>
@@ -655,7 +680,7 @@ ADMIN_DASHBOARD_HTML = BASE_HEAD.replace('{% block content %}{% endblock %}', ""
                     <div class="mt-4 pt-4 border-t border-purple-900/50 flex items-center justify-between">
                         <span class="text-xs {% if plan.enabled %}text-emerald-400{% else %}text-red-400{% endif %} font-semibold">● {% if plan.enabled %}Active{% else %}Disabled{% endif %}</span>
                         <div class="flex gap-2">
-                            <button onclick='editPlan({{ {"id": plan.id, "title": plan.title, "description": plan.description, "price": plan.price, "videos_count": plan.videos_count, "image_url": plan.image_url, "demo_video_urls": plan.demo_video_urls or "", "telegram_url": plan.telegram_url, "demo_instructions": plan.demo_instructions, "enabled": plan.enabled}|tojson|safe }})' class="px-3 py-1.5 rounded-lg bg-purple-800 hover:bg-purple-700 text-white text-xs font-bold transition">Edit</button>
+                            <button onclick='editPlan({{ {"id": plan.id, "title": plan.title, "description": plan.description, "price": plan.price, "videos_count": plan.videos_count, "validity": plan.validity, "image_url": plan.image_url, "demo_video_urls": plan.demo_video_urls or "", "telegram_url": plan.telegram_url, "demo_instructions": plan.demo_instructions, "enabled": plan.enabled}|tojson|safe }})' class="px-3 py-1.5 rounded-lg bg-purple-800 hover:bg-purple-700 text-white text-xs font-bold transition">Edit</button>
                             <a href="/admin/plan/delete/{{ plan.id }}" onclick="return confirm('Delete this plan?');" class="px-3 py-1.5 rounded-lg bg-red-950 hover:bg-red-900 text-red-200 text-xs font-bold transition">Delete</a>
                         </div>
                     </div>
@@ -709,6 +734,7 @@ ADMIN_DASHBOARD_HTML = BASE_HEAD.replace('{% block content %}{% endblock %}', ""
         </div>
     </div>
 </div>
+
 <div id="plan-modal" class="fixed inset-0 z-50 hidden bg-black/80 backdrop-blur-md flex items-center justify-center p-4 overflow-y-auto">
     <div class="glass max-w-xl w-full rounded-3xl p-6 md:p-8 border border-purple-900/50 my-8">
         <div class="flex justify-between items-center mb-6">
@@ -721,7 +747,7 @@ ADMIN_DASHBOARD_HTML = BASE_HEAD.replace('{% block content %}{% endblock %}', ""
                 <label class="block text-xs font-bold uppercase tracking-wider text-purple-300 mb-1">Course Title</label>
                 <input type="text" name="title" id="modal_title" required class="w-full px-4 py-2.5 rounded-xl bg-purple-950/60 border border-purple-500/30 text-white">
             </div>
-            <div class="grid grid-cols-2 gap-4">
+            <div class="grid grid-cols-3 gap-3">
                 <div>
                     <label class="block text-xs font-bold uppercase tracking-wider text-purple-300 mb-1">Price (₹)</label>
                     <input type="number" name="price" id="modal_price" required class="w-full px-4 py-2.5 rounded-xl bg-purple-950/60 border border-purple-500/30 text-white">
@@ -729,6 +755,10 @@ ADMIN_DASHBOARD_HTML = BASE_HEAD.replace('{% block content %}{% endblock %}', ""
                 <div>
                     <label class="block text-xs font-bold uppercase tracking-wider text-purple-300 mb-1">Videos Count</label>
                     <input type="number" name="videos_count" id="modal_videos" required class="w-full px-4 py-2.5 rounded-xl bg-purple-950/60 border border-purple-500/30 text-white">
+                </div>
+                <div>
+                    <label class="block text-xs font-bold uppercase tracking-wider text-purple-300 mb-1">Validity</label>
+                    <input type="text" name="validity" id="modal_validity" value="Lifetime Access" required class="w-full px-4 py-2.5 rounded-xl bg-purple-950/60 border border-purple-500/30 text-white">
                 </div>
             </div>
             <div>
@@ -765,6 +795,7 @@ ADMIN_DASHBOARD_HTML = BASE_HEAD.replace('{% block content %}{% endblock %}', ""
         </form>
     </div>
 </div>
+
 <script>
 function switchTab(tab) {
     document.getElementById('tab-orders').classList.add('hidden');
@@ -787,6 +818,7 @@ function openPlanModal() {
     document.getElementById('modal_title').value = '';
     document.getElementById('modal_price').value = '199';
     document.getElementById('modal_videos').value = '25';
+    document.getElementById('modal_validity').value = 'Lifetime Access';
     document.getElementById('modal_image_url').value = '';
     document.getElementById('modal_demo_video_urls').value = '';
     document.getElementById('modal_img_preview').src = '';
@@ -802,6 +834,7 @@ function editPlan(plan) {
     document.getElementById('modal_title').value = plan.title;
     document.getElementById('modal_price').value = plan.price;
     document.getElementById('modal_videos').value = plan.videos_count;
+    document.getElementById('modal_validity').value = plan.validity || 'Lifetime Access';
     document.getElementById('modal_image_url').value = plan.image_url;
     document.getElementById('modal_demo_video_urls').value = plan.demo_video_urls || '';
     document.getElementById('modal_img_preview').src = plan.image_url;
