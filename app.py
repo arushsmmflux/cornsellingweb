@@ -6,7 +6,7 @@ from flask import Flask, render_template_string, request, redirect, url_for, ses
 from flask_sqlalchemy import SQLAlchemy
 from werkzeug.security import generate_password_hash, check_password_hash
 
-app = Flask(__name__, instance_path="/tmp/instance")
+app = Flask(__name__)
 app.config['SECRET_KEY'] = os.environ.get('SECRET_KEY', 'nexus_secure_secret_key_2026')
 app.config['SQLALCHEMY_DATABASE_URI'] = os.environ.get('DATABASE_URL', 'sqlite:///nexus_courses.db')
 app.config['SQLALCHEMY_TRACK_MODIFICATIONS'] = False
@@ -31,9 +31,9 @@ class Plan(db.Model):
     price = db.Column(db.Integer, nullable=False, default=199)
     videos_count = db.Column(db.Integer, nullable=False, default=25)
     image_url = db.Column(db.String(500), nullable=False)
-    extra_images = db.Column(db.Text, nullable=True) # Comma separated extra preview images
-    telegram_url = db.Column(db.String(500), default="https://t.me/NexusDemoBot")
-    demo_instructions = db.Column(db.Text, default="1. Click Watch Demo on Telegram\n2. Open Telegram bot\n3. Follow instructions to view demo")
+    demo_video_urls = db.Column(db.Text, nullable=True)  # Comma separated video URLs
+    telegram_url = db.Column(db.String(500), default="https://t.me/NexusSupportBot")
+    demo_instructions = db.Column(db.Text, default="1. Below scroll karke saare demo videos dekhein\n2. Stream smoothly without any lag\n3. Click Buy Now to join full course")
     enabled = db.Column(db.Boolean, default=True)
     order_index = db.Column(db.Integer, default=0)
 
@@ -70,7 +70,7 @@ with app.app_context():
         'telegram_support': 'https://t.me/NexusSupportBot',
         'telegram_bot_token': '',
         'telegram_chat_id': '',
-        'payment_instructions': '1. Scan QR or pay to UPI ID\n2. Copy 12-digit UTR number\n3. Submit UTR and screenshot below for verification'
+        'payment_instructions': '1. Scan QR or pay directly to the UPI ID\n2. Copy the 12-digit UTR/Ref Number\n3. Upload payment screenshot and UTR below for instant verification'
     }
     for k, v in default_settings.items():
         if not Setting.query.filter_by(key=k).first():
@@ -78,8 +78,8 @@ with app.app_context():
             
     if Plan.query.count() == 0:
         initial_plans = [
-            ("Python Mastery & Backend Pro", "Build robust backend applications, APIs, and automated systems with Python.", 199, 30, "https://i.ibb.co/Fb6S1mYg/course1.jpg", "https://i.ibb.co/5X0hc5dd/course5.jpg,https://i.ibb.co/ZRqKVvRQ/course2.jpg"),
-            ("Full Stack Web Development Bootcamp", "Master HTML, CSS, JavaScript, React, and Node.js from scratch.", 299, 45, "https://i.ibb.co/ZRqKVvRQ/course2.jpg", "https://i.ibb.co/Fb6S1mYg/course1.jpg"),
+            ("Python Mastery & Backend Pro", "Build robust backend applications, APIs, and automated systems with Python.", 199, 30, "https://i.ibb.co/Fb6S1mYg/course1.jpg", "https://www.w3schools.com/html/mov_bbb.mp4,https://www.w3schools.com/html/mov_bbb.mp4"),
+            ("Full Stack Web Development Bootcamp", "Master HTML, CSS, JavaScript, React, and Node.js from scratch.", 299, 45, "https://i.ibb.co/ZRqKVvRQ/course2.jpg", "https://www.w3schools.com/html/mov_bbb.mp4"),
             ("Advanced React & Next.js Masterclass", "Build lightning-fast, SEO-optimized web applications with modern React.", 249, 28, "https://i.ibb.co/21H7BGM2/course3.jpg", ""),
             ("Data Science & Machine Learning Pro", "Analyze complex datasets and build predictive AI models using Python.", 399, 50, "https://i.ibb.co/QF2v05qK/course4.jpg", ""),
             ("Cybersecurity & Ethical Hacking 2026", "Learn penetration testing, network security, and vulnerability assessment.", 349, 35, "https://i.ibb.co/5X0hc5dd/course5.jpg", ""),
@@ -89,8 +89,8 @@ with app.app_context():
             ("AI & Generative Prompt Engineering", "Leverage LLMs, AI agents, and prompt frameworks to supercharge productivity.", 199, 20, "https://i.ibb.co/qFhKnzcH/course9.jpg", ""),
             ("Digital Marketing & Growth Hacking", "Scale brands, run high-converting ad campaigns, and master SEO.", 199, 25, "https://i.ibb.co/84598K8j/course10.jpg", "")
         ]
-        for idx, (title, desc, price, vids, img, extra) in enumerate(initial_plans):
-            p = Plan(title=title, description=desc, price=price, videos_count=vids, image_url=img, extra_images=extra, order_index=idx)
+        for idx, (title, desc, price, vids, img, demo_vids) in enumerate(initial_plans):
+            p = Plan(title=title, description=desc, price=price, videos_count=vids, image_url=img, demo_video_urls=demo_vids, order_index=idx)
             db.session.add(p)
             
     if not Analytics.query.first():
@@ -118,7 +118,7 @@ def send_telegram_notification(order_info):
         try:
             requests.post(url, json={"chat_id": chat_id, "text": message, "parse_mode": "Markdown"}, timeout=5)
         except Exception as e:
-            print("Telegram notification failed:", e)
+            print("Telegram notification error:", e)
 
 # --- ROUTES ---
 @app.route('/')
@@ -135,8 +135,8 @@ def index():
 def demo_page(plan_id):
     settings = get_settings()
     plan = Plan.query.get_or_404(plan_id)
-    extra_imgs = [img.strip() for img in plan.extra_images.split(',')] if plan.extra_images else []
-    return render_template_string(DEMO_HTML, settings=settings, plan=plan, extra_imgs=extra_imgs)
+    demo_list = [url.strip() for url in plan.demo_video_urls.split(',')] if plan.demo_video_urls else []
+    return render_template_string(DEMO_HTML, settings=settings, plan=plan, demo_list=demo_list)
 
 @app.route('/payment/<int:plan_id>', methods=['GET', 'POST'])
 def payment_page(plan_id):
@@ -145,7 +145,7 @@ def payment_page(plan_id):
     if request.method == 'POST':
         utr = request.form.get('utr', '').strip()
         if not utr or len(utr) < 8:
-            flash('Please enter a valid 12-digit UTR / Transaction Reference Number.', 'error')
+            flash('Please enter a valid UTR / Transaction Reference Number.', 'error')
             return redirect(url_for('payment_page', plan_id=plan_id))
         
         order_id = 'NEXUS-' + datetime.utcnow().strftime('%Y%m%d%H%M%S') + '-' + str(plan.id)
@@ -227,8 +227,7 @@ def admin_save_plan():
     price = int(request.form.get('price', 199))
     videos_count = int(request.form.get('videos_count', 25))
     image_url = request.form.get('image_url')
-    extra_images = request.form.get('extra_images', '')
-    telegram_url = request.form.get('telegram_url')
+    demo_video_urls = request.form.get('demo_video_urls', '')
     demo_instructions = request.form.get('demo_instructions')
     enabled = True if request.form.get('enabled') == 'on' else False
     
@@ -239,15 +238,14 @@ def admin_save_plan():
         plan.price = price
         plan.videos_count = videos_count
         plan.image_url = image_url
-        plan.extra_images = extra_images
-        plan.telegram_url = telegram_url
+        plan.demo_video_urls = demo_video_urls
         plan.demo_instructions = demo_instructions
         plan.enabled = enabled
     else:
         max_order = db.session.query(db.func.max(Plan.order_index)).scalar() or 0
         new_plan = Plan(
             title=title, description=description, price=price, videos_count=videos_count,
-            image_url=image_url, extra_images=extra_images, telegram_url=telegram_url, demo_instructions=demo_instructions,
+            image_url=image_url, demo_video_urls=demo_video_urls, demo_instructions=demo_instructions,
             enabled=enabled, order_index=max_order + 1
         )
         db.session.add(new_plan)
@@ -392,37 +390,39 @@ DEMO_HTML = BASE_HEAD.replace('{% block content %}{% endblock %}', """
             </div>
         </div>
 
-        <!-- Extra Demo Images Stacked Vertically (One by One) -->
-        {% if extra_imgs %}
-        <div class="pt-6 border-t border-purple-900/40 flex flex-col gap-6">
-            <h3 class="text-lg font-bold text-purple-200"><i class="fa-solid fa-images mr-2 text-purple-400"></i> Course Preview Screenshots</h3>
-            {% for img in extra_imgs %}
-            {% if img %}
-            <div class="w-full h-96 rounded-2xl overflow-hidden border border-purple-500/30 bg-black/80 flex items-center justify-center p-4">
-                <img src="{{ img }}" alt="Screenshot" class="w-full h-full object-contain drop-shadow-xl" onerror="this.style.display='none'">
+        <!-- Dynamic Demo Videos Stacked Vertically -->
+        {% if demo_list %}
+        <div class="pt-6 border-t border-purple-900/40 flex flex-col gap-8">
+            <h3 class="text-xl font-bold text-white flex items-center gap-2">
+                <i class="fa-solid fa-play-circle text-red-500"></i> Course Demo Videos
+            </h3>
+            {% for v_url in demo_list %}
+            {% if v_url %}
+            <div class="flex flex-col gap-2">
+                <span class="text-sm font-bold text-purple-300 uppercase tracking-wider">Demo {{ loop.index }}</span>
+                <div class="w-full rounded-2xl overflow-hidden border border-purple-500/30 bg-black shadow-2xl">
+                    <video controls preload="metadata" class="w-full h-80 object-cover focus:outline-none">
+                        <source src="{{ v_url }}" type="video/mp4">
+                        Your browser does not support the video tag.
+                    </video>
+                </div>
             </div>
             {% endif %}
             {% endfor %}
         </div>
         {% endif %}
 
-        <!-- Telegram & Buy Buttons Stacked Vertically (Upar-Neeche) -->
-        <div class="pt-8 border-t border-purple-900/40 flex flex-col gap-4 text-center">
-            <h3 class="text-xl font-bold">Want to test the course before buying?</h3>
-            <div>
-                <a href="{{ plan.telegram_url }}" target="_blank" class="inline-flex items-center justify-center gap-3 w-full md:w-auto px-8 py-4 rounded-2xl bg-blue-600 hover:bg-blue-500 text-white font-bold text-lg shadow-2xl glow-blue transition transform hover:scale-105">
-                    <i class="fa-brands fa-telegram text-2xl"></i> WATCH DEMO ON TELEGRAM
-                </a>
-            </div>
-        </div>
-
         <div class="p-6 rounded-2xl bg-purple-950/40 border border-purple-500/20">
-            <h4 class="font-bold text-purple-300 mb-3"><i class="fa-solid fa-circle-question mr-2"></i> How to Watch the Demo</h4>
+            <h4 class="font-bold text-purple-300 mb-3"><i class="fa-solid fa-circle-question mr-2"></i> Instructions</h4>
             <div class="text-sm text-purple-200/80 whitespace-pre-line leading-relaxed">{{ plan.demo_instructions }}</div>
         </div>
 
-        <div>
-            <a href="/payment/{{ plan.id }}" class="block w-full py-4 rounded-2xl bg-gradient-to-r from-purple-600 to-blue-600 hover:from-purple-500 hover:to-blue-500 text-white text-center font-black text-lg shadow-xl glow-effect transition">
+        <!-- Vertically Stacked Action Buttons -->
+        <div class="pt-6 border-t border-purple-900/40 flex flex-col gap-4">
+            <a href="{{ plan.telegram_url }}" target="_blank" class="w-full py-4 rounded-2xl bg-red-600 hover:bg-red-500 text-white text-center font-bold text-lg shadow-xl transition flex items-center justify-center gap-2">
+                <i class="fa-solid fa-headset"></i> Contact Support / Telegram Demo
+            </a>
+            <a href="/payment/{{ plan.id }}" class="w-full py-4 rounded-2xl bg-gradient-to-r from-purple-600 to-blue-600 hover:from-purple-500 hover:to-blue-500 text-white text-center font-black text-lg shadow-xl glow-effect transition">
                 BUY NOW — UNLOCK PREMIUM ACCESS (₹{{ plan.price }})
             </a>
         </div>
@@ -482,7 +482,7 @@ SUCCESS_HTML = BASE_HEAD.replace('{% block content %}{% endblock %}', """
             <i class="fa-solid fa-check"></i>
         </div>
         <h1 class="text-2xl font-black text-white">Payment Details Submitted!</h1>
-        <p class="text-purple-300/80 text-sm mt-2">Your payment screenshot and UTR have been recorded and sent to the admin via Telegram.</p>
+        <p class="text-purple-300/80 text-sm mt-2">Your payment details have been recorded and sent to the admin via Telegram.</p>
         <div class="my-6 p-4 rounded-2xl bg-purple-950/60 border border-purple-500/30 text-left space-y-2 text-sm">
             <div class="flex justify-between"><span class="text-purple-400">Order ID:</span> <span class="font-mono text-white">{{ order.order_id }}</span></div>
             <div class="flex justify-between"><span class="text-purple-400">Course:</span> <span class="text-white font-bold">{{ order.course_name }}</span></div>
@@ -634,7 +634,7 @@ ADMIN_DASHBOARD_HTML = BASE_HEAD.replace('{% block content %}{% endblock %}', ""
                     <div class="mt-4 pt-4 border-t border-purple-900/50 flex items-center justify-between">
                         <span class="text-xs {% if plan.enabled %}text-emerald-400{% else %}text-red-400{% endif %} font-semibold">● {% if plan.enabled %}Active{% else %}Disabled{% endif %}</span>
                         <div class="flex gap-2">
-                            <button onclick='editPlan({{ {"id": plan.id, "title": plan.title, "description": plan.description, "price": plan.price, "videos_count": plan.videos_count, "image_url": plan.image_url, "extra_images": plan.extra_images or "", "telegram_url": plan.telegram_url, "demo_instructions": plan.demo_instructions, "enabled": plan.enabled}|tojson|safe }})' class="px-3 py-1.5 rounded-lg bg-purple-800 hover:bg-purple-700 text-white text-xs font-bold transition">Edit</button>
+                            <button onclick='editPlan({{ {"id": plan.id, "title": plan.title, "description": plan.description, "price": plan.price, "videos_count": plan.videos_count, "image_url": plan.image_url, "demo_video_urls": plan.demo_video_urls or "", "telegram_url": plan.telegram_url, "demo_instructions": plan.demo_instructions, "enabled": plan.enabled}|tojson|safe }})' class="px-3 py-1.5 rounded-lg bg-purple-800 hover:bg-purple-700 text-white text-xs font-bold transition">Edit</button>
                             <a href="/admin/plan/delete/{{ plan.id }}" onclick="return confirm('Delete this plan?');" class="px-3 py-1.5 rounded-lg bg-red-950 hover:bg-red-900 text-red-200 text-xs font-bold transition">Delete</a>
                         </div>
                     </div>
@@ -648,7 +648,7 @@ ADMIN_DASHBOARD_HTML = BASE_HEAD.replace('{% block content %}{% endblock %}', ""
             <h2 class="text-xl font-bold text-white mb-6">Website, UPI & Telegram Bot Settings</h2>
             <form action="/admin/settings/update" method="POST" class="space-y-6">
                 <div>
-                    <label class="block text-xs font-bold uppercase tracking-wider text-purple-300 mb-2">Website Name (Top Priority)</label>
+                    <label class="block text-xs font-bold uppercase tracking-wider text-purple-300 mb-2">Website Name</label>
                     <input type="text" name="site_name" value="{{ settings.site_name }}" required class="w-full px-4 py-3 rounded-xl bg-purple-950/60 border border-purple-500/30 text-white">
                 </div>
                 <div>
@@ -697,7 +697,7 @@ ADMIN_DASHBOARD_HTML = BASE_HEAD.replace('{% block content %}{% endblock %}', ""
         <form action="/admin/plan/save" method="POST" class="space-y-4">
             <input type="hidden" name="plan_id" id="modal_plan_id">
             <div>
-                <label class="block text-xs font-bold uppercase tracking-wider text-purple-300 mb-1">Course Title (Top Priority)</label>
+                <label class="block text-xs font-bold uppercase tracking-wider text-purple-300 mb-1">Course Title</label>
                 <input type="text" name="title" id="modal_title" required class="w-full px-4 py-2.5 rounded-xl bg-purple-950/60 border border-purple-500/30 text-white">
             </div>
             <div class="grid grid-cols-2 gap-4">
@@ -718,11 +718,11 @@ ADMIN_DASHBOARD_HTML = BASE_HEAD.replace('{% block content %}{% endblock %}', ""
                 </div>
             </div>
             <div>
-                <label class="block text-xs font-bold uppercase tracking-wider text-purple-300 mb-1">Extra Demo Images URLs (Comma Separated for 2-3 Images)</label>
-                <input type="text" name="extra_images" id="modal_extra_images" placeholder="https://i.ibb.co/..., https://i.ibb.co/..." class="w-full px-4 py-2.5 rounded-xl bg-purple-950/60 border border-purple-500/30 text-white text-xs">
+                <label class="block text-xs font-bold uppercase tracking-wider text-purple-300 mb-1">Demo Video URLs (Comma Separated for Demo 1, Demo 2, etc.)</label>
+                <input type="text" name="demo_video_urls" id="modal_demo_video_urls" placeholder="https://..., https://..." class="w-full px-4 py-2.5 rounded-xl bg-purple-950/60 border border-purple-500/30 text-white text-xs">
             </div>
             <div>
-                <label class="block text-xs font-bold uppercase tracking-wider text-purple-300 mb-1">Telegram Demo URL (Bot / Link)</label>
+                <label class="block text-xs font-bold uppercase tracking-wider text-purple-300 mb-1">Support / Contact Link</label>
                 <input type="text" name="telegram_url" id="modal_telegram" required class="w-full px-4 py-2.5 rounded-xl bg-purple-950/60 border border-purple-500/30 text-white">
             </div>
             <div>
@@ -730,7 +730,7 @@ ADMIN_DASHBOARD_HTML = BASE_HEAD.replace('{% block content %}{% endblock %}', ""
                 <textarea name="description" id="modal_desc" rows="3" required class="w-full px-4 py-2.5 rounded-xl bg-purple-950/60 border border-purple-500/30 text-white"></textarea>
             </div>
             <div>
-                <label class="block text-xs font-bold uppercase tracking-wider text-purple-300 mb-1">Demo Instructions</label>
+                <label class="block text-xs font-bold uppercase tracking-wider text-purple-300 mb-1">Instructions</label>
                 <textarea name="demo_instructions" id="modal_instructions" rows="2" required class="w-full px-4 py-2.5 rounded-xl bg-purple-950/60 border border-purple-500/30 text-white"></textarea>
             </div>
             <div class="flex items-center gap-3 pt-2">
@@ -767,11 +767,11 @@ function openPlanModal() {
     document.getElementById('modal_price').value = '199';
     document.getElementById('modal_videos').value = '25';
     document.getElementById('modal_image_url').value = '';
-    document.getElementById('modal_extra_images').value = '';
+    document.getElementById('modal_demo_video_urls').value = '';
     document.getElementById('modal_img_preview').src = '';
-    document.getElementById('modal_telegram').value = 'https://t.me/NexusDemoBot';
+    document.getElementById('modal_telegram').value = 'https://t.me/NexusSupportBot';
     document.getElementById('modal_desc').value = '';
-    document.getElementById('modal_instructions').value = '1. Click Watch Demo on Telegram\\n2. Open Telegram bot\\n3. Follow instructions';
+    document.getElementById('modal_instructions').value = '1. Below scroll karke saare demo videos dekhein\\n2. Stream smoothly without any lag\\n3. Click Buy Now to join full course';
     document.getElementById('modal_enabled').checked = true;
     document.getElementById('plan-modal').classList.remove('hidden');
 }
@@ -782,7 +782,7 @@ function editPlan(plan) {
     document.getElementById('modal_price').value = plan.price;
     document.getElementById('modal_videos').value = plan.videos_count;
     document.getElementById('modal_image_url').value = plan.image_url;
-    document.getElementById('modal_extra_images').value = plan.extra_images || '';
+    document.getElementById('modal_demo_video_urls').value = plan.demo_video_urls || '';
     document.getElementById('modal_img_preview').src = plan.image_url;
     document.getElementById('modal_telegram').value = plan.telegram_url;
     document.getElementById('modal_desc').value = plan.description;
